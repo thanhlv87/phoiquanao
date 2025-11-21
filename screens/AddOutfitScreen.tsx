@@ -42,9 +42,9 @@ const TagInputSection: React.FC<{
       <h3 className="text-lg font-semibold text-gray-700 mb-2">{title}</h3>
       <div className="flex flex-wrap gap-2 mb-3">
         {tags.map(tag => (
-          <div key={tag} className="flex items-center bg-blue-100 text-blue-800 text-sm font-medium pl-3 pr-2 py-1 rounded-full">
+          <div key={tag} className="flex items-center bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 text-sm font-medium pl-3 pr-2 py-1 rounded-full">
             <span>{tag}</span>
-            <button onClick={() => onRemoveTag(tag)} className="ml-2 text-blue-500 hover:text-blue-700">
+            <button onClick={() => onRemoveTag(tag)} className="ml-2 text-purple-500 hover:text-purple-700">
               &times;
             </button>
           </div>
@@ -57,9 +57,9 @@ const TagInputSection: React.FC<{
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={`Thêm thẻ ${title.toLowerCase()}...`}
-          className="w-full pl-3 pr-16 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full pl-3 pr-16 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
         />
-        <button onClick={handleAdd} className="absolute right-1 top-1/2 -translate-y-1/2 bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-semibold hover:bg-blue-700">Thêm</button>
+        <button onClick={handleAdd} className="absolute right-1 top-1/2 -translate-y-1/2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 rounded-md text-sm font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300">Thêm</button>
       </div>
       <div className="flex flex-wrap gap-2 mt-2">
         {filteredSuggestions.slice(0, 5).map(suggestion => (
@@ -320,31 +320,34 @@ export const AddOutfitScreen: React.FC = () => {
           className="hidden"
         />
 
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        {allImages.length === 0 ? (
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full aspect-video bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border-2 border-dashed border-purple-300 flex flex-col items-center justify-center cursor-pointer hover:from-purple-100 hover:to-pink-100 transition-all duration-300 mb-4"
+          >
+            <Icon name="plus" className="w-12 h-12 text-purple-400 mb-2" />
+            <p className="text-sm text-purple-600 font-semibold">Chọn hình ảnh trang phục</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2 mb-4">
             {allImages.map(({ type, src }, index) => (
-                <div key={src} className="relative group aspect-square">
-                    <img src={src} alt={`Outfit image ${index + 1}`} className="w-full h-full object-cover rounded-lg shadow" />
-                    <button
-                        onClick={() => removeImage(type === 'existing' ? images.findIndex(s => s === src) : newImageFiles.findIndex(f => URL.createObjectURL(f) === src), type as 'existing' | 'new')}
-                        className="absolute top-1 right-1 bg-black/50 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                        &times;
-                    </button>
-                </div>
+              <div key={src} className="relative group aspect-square">
+                <img src={src} alt={`Outfit image ${index + 1}`} className="w-full h-full object-cover rounded-lg shadow" />
+                <button
+                  onClick={() => removeImage(type === 'existing' ? images.findIndex(s => s === src) : newImageFiles.findIndex(f => URL.createObjectURL(f) === src), type as 'existing' | 'new')}
+                  className="absolute top-1 right-1 bg-black/50 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  &times;
+                </button>
+              </div>
             ))}
-             <div
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full aspect-square bg-gray-200 rounded-lg border-2 border-dashed border-gray-400 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors"
-            >
-                <Icon name="plus" className="w-8 h-8 text-gray-500" />
-                <p className="text-xs text-gray-500 mt-1">Thêm ảnh</p>
-            </div>
-        </div>
+          </div>
+        )}
 
         <button
           onClick={handleGenerateTags}
           disabled={allImages.length === 0 || isGenerating}
-          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-3 px-5 rounded-lg shadow-md hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mb-6"
+          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-glow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mb-6 transform hover:scale-105"
         >
           {isGenerating ? (
             <><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div><span>Đang phân tích...</span></>
@@ -355,7 +358,7 @@ export const AddOutfitScreen: React.FC = () => {
         
         {error && <p className="bg-red-100 text-red-700 text-center p-3 rounded-lg mb-4 text-sm">{error}</p>}
         
-        <div className="bg-white p-4 rounded-lg shadow-md">
+        <div className="bg-white/80 backdrop-blur-xl p-6 rounded-2xl shadow-xl">
             <TagInputSection title="Áo" tags={tops} suggestions={suggestions.tops} onAddTag={(tag) => addTagCallback(setTops, tag)} onRemoveTag={(tag) => removeTagCallback(setTops, tag)} onSuggestionClick={(tag) => addTagCallback(setTops, tag)} />
             <TagInputSection title="Quần" tags={bottoms} suggestions={suggestions.bottoms} onAddTag={(tag) => addTagCallback(setBottoms, tag)} onRemoveTag={(tag) => removeTagCallback(setBottoms, tag)} onSuggestionClick={(tag) => addTagCallback(setBottoms, tag)} />
             <TagInputSection title="Thẻ chung" tags={tags} suggestions={suggestions.tags} onAddTag={(tag) => addTagCallback(setTags, tag)} onRemoveTag={(tag) => removeTagCallback(setTags, tag)} onSuggestionClick={(tag) => addTagCallback(setTags, tag)} />
@@ -363,11 +366,11 @@ export const AddOutfitScreen: React.FC = () => {
         </div>
         
         <div className="mt-8 flex items-center gap-4">
-          <button onClick={handleSave} disabled={isSaving || isDeleting} className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-blue-700 transition-colors disabled:bg-blue-300">
+          <button onClick={handleSave} disabled={isSaving || isDeleting} className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-glow-lg transition-all duration-300 disabled:opacity-50 transform hover:scale-105">
             {isSaving ? 'Đang lưu...' : (isEditMode ? 'Cập nhật' : 'Lưu trang phục')}
           </button>
           {isEditMode && (
-            <button onClick={handleDelete} disabled={isSaving || isDeleting} className="bg-red-100 text-red-600 font-bold py-3 px-5 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50">
+            <button onClick={handleDelete} disabled={isSaving || isDeleting} className="bg-red-100 text-red-600 font-bold py-3 px-5 rounded-xl hover:bg-red-200 transition-all duration-300 disabled:opacity-50">
               {isDeleting ? 'Đang xóa...' : 'Xóa'}
             </button>
           )}

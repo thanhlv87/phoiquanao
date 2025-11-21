@@ -1,7 +1,9 @@
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
-import { getStorage } from "firebase/storage";
+
+// Fix: Updated Firebase imports to use scoped packages to resolve module export errors.
+import { initializeApp } from "@firebase/app";
+import { getFirestore } from "@firebase/firestore";
+import { getAuth } from "@firebase/auth";
+import { getStorage } from "@firebase/storage";
 
 // IMPORTANT: Replace this with your app's Firebase project configuration.
 // You can find this in your Firebase project settings.

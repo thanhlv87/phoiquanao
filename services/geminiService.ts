@@ -30,10 +30,11 @@ export const generateTagsFromImage = async (base64Image: string): Promise<AiTags
               data: base64Data,
             },
           },
-          { text: "Phân tích hình ảnh về một bộ trang phục này. Xác định các loại áo và quần, và cung cấp các thẻ mô tả chung về phong cách. Phản hồi ở định dạng JSON." },
+          { text: "Phân tích trang phục trong hình ảnh này. Xác định các loại áo, quần và các thẻ mô tả phong cách chung." },
         ],
       },
       config: {
+        systemInstruction: "Bạn là một chuyên gia thời trang. Nhiệm vụ của bạn là phân tích hình ảnh trang phục và trả về các thẻ mô tả bằng tiếng Việt, theo định dạng JSON được yêu cầu. Chỉ sử dụng tiếng Việt.",
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -41,17 +42,17 @@ export const generateTagsFromImage = async (base64Image: string): Promise<AiTags
             tops: {
               type: Type.ARRAY,
               items: { type: Type.STRING },
-              description: "List of top clothing items identified, e.g., 'T-shirt', 'Hoodie'."
+              description: "Danh sách các loại áo được xác định, ví dụ: 'Áo phông', 'Áo hoodie'."
             },
             bottoms: {
               type: Type.ARRAY,
               items: { type: Type.STRING },
-              description: "List of bottom clothing items identified, e.g., 'Jeans', 'Shorts'."
+              description: "Danh sách các loại quần được xác định, ví dụ: 'Quần jeans', 'Quần short'."
             },
             general: {
               type: Type.ARRAY,
               items: { type: Type.STRING },
-              description: "List of general style tags, e.g., 'Casual', 'Formal', 'Sporty'."
+              description: "Danh sách các thẻ phong cách chung, ví dụ: 'Thường ngày', 'Trang trọng', 'Thể thao'."
             },
           },
         },

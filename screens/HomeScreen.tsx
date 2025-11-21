@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOutfits } from '../hooks/useOutfits';
 import { useAuth } from '../hooks/useAuth';
@@ -8,18 +9,71 @@ import { generateOutfitSuggestion } from '../services/geminiService';
 import { Icon } from '../components/Icon';
 import { Outfit } from '../types';
 
-const OutfitDisplay: React.FC<{ outfit: Outfit }> = ({ outfit }) => (
-  <div className="bg-white rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105">
-    <img src={outfit.imageUrl} alt="Today's outfit" className="w-full h-64 object-cover" />
-    <div className="p-4">
-      <div className="flex flex-wrap gap-2">
-        {[...outfit.tops, ...outfit.bottoms, ...outfit.tags].map(tag => (
-          <span key={tag} className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">{tag}</span>
-        ))}
-      </div>
-    </div>
-  </div>
-);
+const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => void }> = ({ outfits, onNavigate }) => {
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [showLeftArrow, setShowLeftArrow] = useState(false);
+    const [showRightArrow, setShowRightArrow] = useState(true);
+
+    const handleScroll = () => {
+        if(scrollContainerRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+            setShowLeftArrow(scrollLeft > 0);
+            setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1);
+        }
+    };
+
+    const scroll = (direction: 'left' | 'right') => {
+        if(scrollContainerRef.current) {
+            const scrollAmount = scrollContainerRef.current.clientWidth * 0.8;
+            scrollContainerRef.current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+        }
+    };
+    
+    if (outfits.length === 1) {
+      const outfit = outfits[0];
+       return (
+        <div onClick={() => onNavigate(outfit.id)} className="bg-white rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105 cursor-pointer">
+          <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full aspect-square object-cover" />
+          <div className="p-4">
+            <div className="flex flex-wrap gap-2">
+              {[...outfit.tops, ...outfit.bottoms, ...outfit.tags].slice(0, 4).map(tag => (
+                <span key={tag} className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">{tag}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    return (
+        <div className="relative">
+            <div ref={scrollContainerRef} onScroll={handleScroll} className="flex space-x-4 overflow-x-auto snap-x snap-mandatory pb-2 scrollbar-hide">
+                {outfits.map((outfit) => (
+                    <div key={outfit.id} onClick={() => onNavigate(outfit.id)} className="snap-start flex-shrink-0 w-[80%] md:w-[45%] bg-white rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105 cursor-pointer">
+                        <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full aspect-square object-cover" />
+                        <div className="p-3">
+                            <div className="flex flex-wrap gap-1">
+                                {[...outfit.tops, ...outfit.bottoms].slice(0, 3).map(tag => (
+                                    <span key={tag} className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full">{tag}</span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            {showLeftArrow && (
+                <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 shadow-md z-10 hover:bg-white">
+                    <Icon name="chevron-left" className="w-6 h-6 text-gray-700" />
+                </button>
+            )}
+            {showRightArrow && (
+                <button onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 shadow-md z-10 hover:bg-white">
+                    <Icon name="chevron-right" className="w-6 h-6 text-gray-700" />
+                </button>
+            )}
+        </div>
+    );
+};
 
 const AddOutfitPrompt: React.FC<{ onAdd: () => void }> = ({ onAdd }) => (
   <div className="bg-white rounded-xl shadow-md p-6 text-center flex flex-col items-center justify-center min-h-[200px] border-2 border-dashed border-gray-300">
@@ -59,28 +113,24 @@ const LoadingSpinner: React.FC = () => (
   </div>
 );
 
-const OutfitFlashback: React.FC<{ outfit: Outfit }> = ({ outfit }) => {
-    const navigate = useNavigate();
-    return (
-        <div className="mt-8">
-            <h2 className="text-xl font-semibold text-gray-700 mb-3">Tuần trước vào ngày này...</h2>
-            <div 
-                onClick={() => navigate(`/add-outfit/${outfit.id}`)}
-                className="bg-white rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105 cursor-pointer"
-            >
-                <img src={outfit.imageUrl} alt="Outfit from last week" className="w-full h-56 object-cover" />
-                <div className="p-4">
-                     <div className="flex flex-wrap gap-2">
-                        {[...outfit.tops, ...outfit.bottoms].slice(0, 3).map(tag => (
-                            <span key={tag} className="bg-gray-100 text-gray-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">{tag}</span>
-                        ))}
-                        {([...outfit.tops, ...outfit.bottoms].length > 3) && <span className="text-gray-500 text-xs font-semibold">...</span>}
-                    </div>
-                    <p className="text-sm text-gray-500 mt-3">Bạn đã mặc bộ đồ này. Nhấn để xem chi tiết.</p>
-                </div>
-            </div>
+const FlashbackSection: React.FC<{
+  title: string;
+  outfits: Outfit[];
+  fallbackMessage: string;
+  onNavigate: (id: string) => void;
+}> = ({ title, outfits, fallbackMessage, onNavigate }) => {
+  return (
+    <div className="mt-8">
+      <h2 className="text-xl font-semibold text-gray-700 mb-3">{title}</h2>
+      {outfits.length > 0 ? (
+        <OutfitCarousel outfits={outfits} onNavigate={onNavigate} />
+      ) : (
+        <div className="bg-white/70 rounded-xl shadow-md p-4 text-center text-sm text-gray-500 border border-dashed">
+          <p>{fallbackMessage}</p>
         </div>
-    );
+      )}
+    </div>
+  );
 };
 
 const StyleSuggestion: React.FC = () => {
@@ -89,14 +139,14 @@ const StyleSuggestion: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const hasEnoughOutfits = useMemo(() => Object.keys(state.outfits).length >= 3, [state.outfits]);
+  const hasEnoughOutfits = useMemo(() => Object.keys(state.allOutfits).length >= 3, [state.allOutfits]);
 
   const handleGetSuggestion = async () => {
     setIsLoading(true);
     setError('');
     setSuggestion('');
     try {
-      const frequentTags = getMostFrequentTags(state.outfits, 10);
+      const frequentTags = getMostFrequentTags(Object.values(state.allOutfits), 10);
       if(frequentTags.length === 0) {
         frequentTags.push('casual', 'comfortable');
       }
@@ -152,13 +202,13 @@ export const HomeScreen: React.FC = () => {
   const navigate = useNavigate();
   const { state } = useOutfits();
   const { user, logout } = useAuth();
-  const { outfits, loading, error } = state;
+  const { outfitsByDate, loading, error } = state;
 
   const todayId = getTodayDateString();
-  const todaysOutfit = outfits[todayId];
+  const todaysOutfits = outfitsByDate[todayId] || [];
 
-  const outfitFromLastWeek = useMemo(() => {
-    if (loading || !outfits) return null;
+  const outfitsFromLastWeek = useMemo(() => {
+    if (loading || !outfitsByDate) return [];
     
     const today = new Date();
     const lastWeekDate = new Date();
@@ -170,11 +220,41 @@ export const HomeScreen: React.FC = () => {
     
     const lastWeekId = `${year}-${month}-${day}`;
     
-    return outfits[lastWeekId] || null;
-  }, [outfits, loading]);
+    return outfitsByDate[lastWeekId] || [];
+  }, [outfitsByDate, loading]);
+
+  const outfitsFromLastMonth = useMemo(() => {
+    if (loading || !outfitsByDate) return [];
+    const lastMonthDate = new Date();
+    lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
+    
+    const year = lastMonthDate.getFullYear();
+    const month = String(lastMonthDate.getMonth() + 1).padStart(2, '0');
+    const day = String(lastMonthDate.getDate()).padStart(2, '0');
+    
+    const lastMonthId = `${year}-${month}-${day}`;
+    return outfitsByDate[lastMonthId] || [];
+  }, [outfitsByDate, loading]);
+
+  const outfitsFromLastYear = useMemo(() => {
+    if (loading || !outfitsByDate) return [];
+    const lastYearDate = new Date();
+    lastYearDate.setFullYear(lastYearDate.getFullYear() - 1);
+
+    const year = lastYearDate.getFullYear();
+    const month = String(lastYearDate.getMonth() + 1).padStart(2, '0');
+    const day = String(lastYearDate.getDate()).padStart(2, '0');
+    
+    const lastYearId = `${year}-${month}-${day}`;
+    return outfitsByDate[lastYearId] || [];
+  }, [outfitsByDate, loading]);
 
   const handleAddOutfit = () => {
     navigate(`/add-outfit/${todayId}`);
+  };
+  
+  const handleEditOutfit = (outfitId: string) => {
+    navigate(`/outfit/${outfitId}`);
   };
 
   const greetingName = user && !user.isAnonymous ? (user.displayName?.split(' ')[0] || user.email) : '';
@@ -203,15 +283,34 @@ export const HomeScreen: React.FC = () => {
         {loading && <LoadingSpinner />}
         {error && <p className="text-red-500 text-center">Không thể tải trang phục. Vui lòng thử lại sau.</p>}
         {!loading && !error && (
-            todaysOutfit ? (
-              <OutfitDisplay outfit={todaysOutfit} />
+            todaysOutfits.length > 0 ? (
+              <OutfitCarousel outfits={todaysOutfits} onNavigate={handleEditOutfit} />
             ) : (
               <AddOutfitPrompt onAdd={handleAddOutfit} />
             )
         )}
         
-        {!loading && !error && outfitFromLastWeek && (
-          <OutfitFlashback outfit={outfitFromLastWeek} />
+        {!loading && !error && (
+          <>
+            <FlashbackSection
+                title="Tuần trước vào ngày này..."
+                outfits={outfitsFromLastWeek}
+                fallbackMessage="Chưa có dữ liệu cho tuần trước. Hãy tiếp tục ghi lại để xem lại nhé!"
+                onNavigate={handleEditOutfit}
+            />
+            <FlashbackSection
+                title="Tháng trước vào ngày này..."
+                outfits={outfitsFromLastMonth}
+                fallbackMessage="Tháng trước bạn chưa ghi lại gì vào ngày này. Cùng tạo ký ức cho tháng sau nhé!"
+                onNavigate={handleEditOutfit}
+            />
+            <FlashbackSection
+                title="Năm trước vào ngày này..."
+                outfits={outfitsFromLastYear}
+                fallbackMessage="Một năm trôi qua nhanh thật! Hãy bắt đầu lưu lại những khoảnh khắc thời trang của bạn từ hôm nay."
+                onNavigate={handleEditOutfit}
+            />
+          </>
         )}
         
         {(!user || user.isAnonymous) && !loading && <SignUpPrompt />}

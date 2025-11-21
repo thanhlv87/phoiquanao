@@ -1,26 +1,39 @@
-import { collection, getDocs, setDoc, doc, deleteDoc } from "firebase/firestore";
-import { ref, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
-import { db, storage } from './firebaseConfig';
-import { Outfit } from '../types';
 
-// Gets outfits for a specific user
-export const getOutfits = async (userId: string): Promise<Record<string, Outfit>> => {
+
+// Fix: Updated Firebase imports to use scoped packages to resolve module export errors.
+import { collection, getDocs, setDoc, doc, deleteDoc, addDoc, Timestamp, writeBatch } from "@firebase/firestore";
+import { ref, uploadString, getDownloadURL, deleteObject, listAll } from "@firebase/storage";
+import { db, storage } from './firebaseConfig';
+import { Outfit, Collection } from '../types';
+
+// Helper to upload multiple images and get their URLs
+const uploadOutfitImages = async (userId: string, outfitId: string, imagesBase64: string[]): Promise<string[]> => {
+  const uploadPromises = imagesBase64.map((base64, index) => {
+    const imageRef = ref(storage, `users/${userId}/images/${outfitId}/${Date.now()}-${index}.jpg`);
+    return uploadString(imageRef, base64, 'data_url').then(() => getDownloadURL(imageRef));
+  });
+  return Promise.all(uploadPromises);
+};
+
+// --- Outfits ---
+
+export const getOutfits = async (userId: string): Promise<Outfit[]> => {
   try {
     const outfitsCollectionRef = collection(db, 'users', userId, 'outfits');
     const querySnapshot = await getDocs(outfitsCollectionRef);
-    const outfits: Record<string, Outfit> = {};
+    const outfits: Outfit[] = [];
     querySnapshot.forEach((doc) => {
       const data = doc.data();
-      // Correctly reconstruct the Outfit object by combining the document ID
-      // with the data stored inside it.
-      outfits[doc.id] = {
+      outfits.push({
         id: doc.id,
         date: data.date,
-        imageUrl: data.imageUrl,
-        tops: data.tops,
-        bottoms: data.bottoms,
-        tags: data.tags,
-      } as Outfit;
+        dateId: data.dateId,
+        imageUrls: data.imageUrls || [],
+        tops: data.tops || [],
+        bottoms: data.bottoms || [],
+        tags: data.tags || [],
+        collectionIds: data.collectionIds || [],
+      } as Outfit);
     });
     return outfits;
   } catch (error) {
@@ -29,71 +42,91 @@ export const getOutfits = async (userId: string): Promise<Record<string, Outfit>
   }
 };
 
-const uploadOutfitImage = async (userId: string, outfitId: string, imageBase64: string): Promise<string> => {
-  const storageRef = ref(storage, `users/${userId}/images/${outfitId}.jpg`);
-  await uploadString(storageRef, imageBase64, 'data_url');
-  const downloadURL = await getDownloadURL(storageRef);
-  return downloadURL;
-};
-
-// Adds or updates an outfit for a specific user
-export const addOrUpdateOutfit = async (userId: string, outfitData: Omit<Outfit, 'imageUrl'> & { imageBase64: string }): Promise<Outfit> => {
-  let finalImageUrl: string;
+export const addOrUpdateOutfit = async (
+  userId: string,
+  outfitData: Omit<Outfit, 'imageUrls'> & { newImageBase64s: string[], existingImageUrls: string[] }
+): Promise<Outfit> => {
   try {
-    // SCENARIO: A new image was uploaded (it's a Base64 data URL string)
-    // or an existing outfit is being edited without changing the image (it's an https URL string).
-    if (outfitData.imageBase64 && outfitData.imageBase64.startsWith('data:image')) {
-      // It's a new image, so we upload it to get a new URL.
-      finalImageUrl = await uploadOutfitImage(userId, outfitData.id, outfitData.imageBase64);
-    } else {
-      // It's an existing image. We use the URL that was already there.
-      // The `imageBase64` field is holding the old `imageUrl` in this case.
-      finalImageUrl = outfitData.imageBase64;
-    }
-  } catch (error) {
-      console.error("Error uploading image to Firebase Storage: ", error);
-      throw error;
-  }
+    const isUpdating = !!outfitData.id;
+    const outfitDocRef = isUpdating
+      ? doc(db, 'users', userId, 'outfits', outfitData.id)
+      : doc(collection(db, 'users', userId, 'outfits'));
 
+    const outfitId = outfitDocRef.id;
 
-  try {
-    const outfitForFirestore = {
+    // Upload new images
+    const newImageUrls = await uploadOutfitImages(userId, outfitId, outfitData.newImageBase64s);
+    const finalImageUrls = [...outfitData.existingImageUrls, ...newImageUrls];
+
+    const outfitForFirestore: Outfit = {
+      id: outfitId,
       date: outfitData.date,
-      imageUrl: finalImageUrl, // Use the determined URL
+      dateId: outfitData.dateId,
+      imageUrls: finalImageUrls,
       tops: outfitData.tops,
       bottoms: outfitData.bottoms,
-      tags: outfitData.tags
+      tags: outfitData.tags,
+      collectionIds: outfitData.collectionIds || [],
     };
 
-    const outfitDocRef = doc(db, 'users', userId, 'outfits', outfitData.id);
     await setDoc(outfitDocRef, outfitForFirestore);
-
-    const savedOutfit: Outfit = {
-      id: outfitData.id,
-      ...outfitForFirestore
-    };
     
-    return savedOutfit;
+    return outfitForFirestore;
   } catch (error) {
     console.error("Error saving outfit to Firestore: ", error);
     throw error;
   }
 };
 
-// Deletes an outfit and its image for a specific user
 export const deleteOutfit = async (userId: string, outfitId: string): Promise<void> => {
     try {
         const outfitDocRef = doc(db, 'users', userId, 'outfits', outfitId);
         await deleteDoc(outfitDocRef);
 
-        const imageRef = ref(storage, `users/${userId}/images/${outfitId}.jpg`);
-        await deleteObject(imageRef);
+        const imagesFolderRef = ref(storage, `users/${userId}/images/${outfitId}`);
+        const res = await listAll(imagesFolderRef);
+        const deletePromises = res.items.map((itemRef) => deleteObject(itemRef));
+        await Promise.all(deletePromises);
+
     } catch (error) {
-        if ((error as any).code === 'storage/object-not-found') {
-            console.warn(`Image for outfit ${outfitId} not found in Storage, but Firestore doc deleted.`);
-        } else {
-            console.error("Error deleting outfit: ", error);
-            throw error;
-        }
+        console.error("Error deleting outfit: ", error);
+        throw error;
+    }
+};
+
+// --- Collections ---
+
+export const getCollections = async (userId: string): Promise<Collection[]> => {
+    try {
+        const collectionsRef = collection(db, 'users', userId, 'collections');
+        const snapshot = await getDocs(collectionsRef);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Collection));
+    } catch (error) {
+        console.error("Error fetching collections:", error);
+        throw error;
+    }
+};
+
+export const addCollection = async (userId: string, collectionData: Omit<Collection, 'id'>): Promise<Collection> => {
+    try {
+        const collectionsRef = collection(db, 'users', userId, 'collections');
+        const newDocRef = await addDoc(collectionsRef, collectionData);
+        return { id: newDocRef.id, ...collectionData };
+    } catch (error) {
+        console.error("Error adding collection:", error);
+        throw error;
+    }
+};
+
+export const deleteCollection = async (userId: string, collectionId: string): Promise<void> => {
+    try {
+        const collectionDocRef = doc(db, 'users', userId, 'collections', collectionId);
+        await deleteDoc(collectionDocRef);
+        // Note: This leaves stale `collectionId` references on outfits.
+        // A more robust solution would use a batched write or cloud function to clean these up.
+        // For this implementation, we'll handle stale IDs on the client.
+    } catch (error) {
+        console.error("Error deleting collection:", error);
+        throw error;
     }
 };

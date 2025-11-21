@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Icon } from '../components/Icon';
-import { FirebaseError } from 'firebase/app';
 
 type AuthMode = 'login' | 'signup';
 
@@ -10,41 +9,34 @@ export const AuthScreen: React.FC = () => {
     const [mode, setMode] = useState<AuthMode>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     
     const navigate = useNavigate();
-    const { loginWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
+    const { loginWithGoogle, signInWithEmail, signUpWithEmail, user, error: authError, clearError } = useAuth();
 
-    const getFriendlyErrorMessage = (errorCode: string) => {
-        switch (errorCode) {
-            case 'auth/user-not-found':
-            case 'auth/wrong-password':
-                return 'Email hoặc mật khẩu không hợp lệ. Vui lòng thử lại.';
-            case 'auth/email-already-in-use':
-                return 'Email này đã được liên kết với một tài khoản. Vui lòng đăng nhập.';
-            case 'auth/weak-password':
-                return 'Mật khẩu phải có ít nhất 6 ký tự.';
-            case 'auth/invalid-email':
-                return 'Vui lòng nhập một địa chỉ email hợp lệ.';
-            default:
-                return 'Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.';
+    useEffect(() => {
+        // If the user is already logged in (and not an anonymous user), redirect to home.
+        // This handles the case after a successful Google sign-in redirect.
+        if (user && !user.isAnonymous) {
+            navigate('/');
         }
-    };
-    
+    }, [user, navigate]);
+
+    // When switching modes, clear any existing auth error.
+    useEffect(() => {
+        clearError();
+    }, [mode, clearError]);
+
     const handleAuthAction = async (action: () => Promise<void>) => {
         setLoading(true);
-        setError('');
         try {
             await action();
-            navigate('/');
+            // On success, the user state will change via onAuthStateChanged,
+            // and the first useEffect will redirect to the home page.
         } catch (e) {
-            if (e instanceof FirebaseError) {
-                setError(getFriendlyErrorMessage(e.code));
-            } else {
-                setError('Đã xảy ra lỗi không mong muốn.');
-            }
-            console.error(e);
+            // The error is already set in the auth context by the hook.
+            // We just need to stop the loading indicator here.
+            console.error("Authentication action failed:", e);
         } finally {
             setLoading(false);
         }
@@ -87,7 +79,7 @@ export const AuthScreen: React.FC = () => {
                     </button>
                 </div>
                 
-                {error && <p className="bg-red-100 text-red-700 text-center p-3 rounded-lg mb-4 text-sm">{error}</p>}
+                {authError && <p className="bg-red-100 text-red-700 text-center p-3 rounded-lg mb-4 text-sm">{authError}</p>}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="relative">

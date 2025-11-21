@@ -3,7 +3,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Icon } from './Icon';
 
-const NavItem: React.FC<{ to: string; icon: 'home' | 'calendar' | 'search' | 'collections'; label: string }> = ({ to, icon, label }) => {
+const NavItem: React.FC<{ to: string; icon: 'home' | 'calendar' | 'search' | 'collections' | 'sparkles'; label: string }> = ({ to, icon, label }) => {
   const activeClass = "text-blue-600";
   const inactiveClass = "text-gray-500";
 
@@ -26,6 +26,7 @@ export const BottomNav: React.FC = () => {
       <div className="flex justify-around max-w-lg mx-auto">
         <NavItem to="/" icon="home" label="Trang chủ" />
         <NavItem to="/collections" icon="collections" label="Bộ sưu tập" />
+        <NavItem to="/insights" icon="sparkles" label="Thống kê" />
         <NavItem to="/search" icon="search" label="Tìm kiếm" />
         <NavItem to="/calendar" icon="calendar" label="Lịch" />
       </div>

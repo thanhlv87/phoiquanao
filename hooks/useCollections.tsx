@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Collection } from '../types';
-import { 
-    getCollections as getCollectionsService, 
-    addCollection as addCollectionService, 
-    deleteCollection as deleteCollectionService 
+import {
+    getCollections as getCollectionsService,
+    addCollection as addCollectionService,
+    deleteCollection as deleteCollectionService
 } from '../services/firebaseService';
+import { cacheCollections, getCachedCollections } from '../services/cacheService';
 import { useAuth } from './useAuth';
 
 interface CollectionState {
@@ -36,15 +37,29 @@ export const CollectionProvider: React.FC<{ children: ReactNode }> = ({ children
 
       setState(prevState => ({ ...prevState, loading: true }));
       try {
+        // Load from cache first
+        const cachedCollections = await getCachedCollections(user.uid);
+        if (cachedCollections.length > 0) {
+          const collections: Record<string, Collection> = {};
+          cachedCollections.forEach(c => {
+            collections[c.id] = c;
+          });
+          setState({ collections, loading: false, error: null });
+        }
+
+        // Fetch fresh data
         const collectionsData = await getCollectionsService(user.uid);
         const collections: Record<string, Collection> = {};
         collectionsData.forEach(c => {
           collections[c.id] = c;
         });
         setState({ collections, loading: false, error: null });
+
+        // Update cache
+        await cacheCollections(user.uid, collectionsData);
       } catch (e) {
         console.error("Failed to fetch collections:", e);
-        setState({ collections: {}, loading: false, error: e as Error });
+        setState(prevState => ({ ...prevState, loading: false, error: e as Error }));
       }
     };
 

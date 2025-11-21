@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Outfit } from '../types';
 import { getOutfits, addOrUpdateOutfit as addOrUpdateOutfitService, deleteOutfit as deleteOutfitService } from '../services/firebaseService';
+import { cacheOutfits, getCachedOutfits } from '../services/cacheService';
 import { useAuth } from './useAuth';
 
 interface OutfitState {
@@ -34,7 +35,31 @@ export const OutfitProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       }
 
       setState(prevState => ({ ...prevState, loading: true }));
+
       try {
+        // First, load from cache for instant display
+        const cachedOutfits = await getCachedOutfits(user.uid);
+        if (cachedOutfits.length > 0) {
+          const outfitsByDate: Record<string, Outfit[]> = {};
+          const allOutfits: Record<string, Outfit> = {};
+
+          cachedOutfits.forEach(outfit => {
+            allOutfits[outfit.id] = outfit;
+            if (!outfitsByDate[outfit.dateId]) {
+              outfitsByDate[outfit.dateId] = [];
+            }
+            outfitsByDate[outfit.dateId].push(outfit);
+          });
+
+          // Sort outfits within each day by date (newest first)
+          for (const dateId in outfitsByDate) {
+            outfitsByDate[dateId].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          }
+
+          setState({ outfitsByDate, allOutfits, loading: false, error: null });
+        }
+
+        // Then, fetch fresh data from Firebase
         const outfitsData = await getOutfits(user.uid);
         const outfitsByDate: Record<string, Outfit[]> = {};
         const allOutfits: Record<string, Outfit> = {};
@@ -53,9 +78,12 @@ export const OutfitProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
 
         setState({ outfitsByDate, allOutfits, loading: false, error: null });
+
+        // Update cache with fresh data
+        await cacheOutfits(user.uid, outfitsData);
       } catch (e) {
         console.error("Failed to fetch outfits:", e);
-        setState({ outfitsByDate: {}, allOutfits: {}, loading: false, error: e as Error });
+        setState(prevState => ({ ...prevState, loading: false, error: e as Error }));
       }
     };
 

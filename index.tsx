@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import App from './App';
+import { register as registerServiceWorker, promptInstall } from './utils/serviceWorkerRegistration';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -17,3 +18,9 @@ root.render(
     </HashRouter>
   </React.StrictMode>
 );
+
+// Register service worker for offline support
+registerServiceWorker();
+
+// Setup PWA install prompt
+promptInstall();

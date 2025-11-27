@@ -98,3 +98,61 @@ export const generateOutfitSuggestion = async (tags: string[]): Promise<string> 
         return "Hiện tại không thể tạo gợi ý. Tại sao không thử bộ trang phục thường ngày yêu thích của bạn?";
     }
 };
+
+export const generateYearInReviewSummary = async (outfits: any[], year: number, stats: any): Promise<string> => {
+    if (!process.env.API_KEY) {
+        return `Năm ${year}, bạn đã có ${stats.totalOutfits} outfit được ghi lại! Phong cách của bạn thật đa dạng và thú vị. Những món đồ yêu thích như ${stats.favoriteItems[0]?.item || 'các trang phục'} đã đồng hành cùng bạn qua nhiều khoảnh khắc. Hãy tiếp tục khám phá và thể hiện bản thân qua thời trang trong năm mới nhé!`;
+    }
+
+    // Prepare data for AI
+    const topItems = stats.favoriteItems.slice(0, 5).map((i: any) => i.item).join(', ');
+    const mostWorn = stats.mostWornOutfit ?
+        `${stats.mostWornOutfit.tops.join(', ')} + ${stats.mostWornOutfit.bottoms.join(', ')} (${stats.mostWornOutfit.count} lần)`
+        : 'N/A';
+
+    const allTags = outfits.flatMap(o => [...o.tops, ...o.bottoms, ...o.tags]);
+    const tagCounts: Record<string, number> = {};
+    allTags.forEach(tag => {
+        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+    });
+    const topTags = Object.entries(tagCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10)
+        .map(([tag]) => tag)
+        .join(', ');
+
+    const prompt = `Bạn là một chuyên gia thời trang và phong cách sống. Hãy tạo một bản tổng kết cuối năm ${year} thú vị và ý nghĩa cho người dùng dựa trên dữ liệu trang phục của họ.
+
+THÔNG TIN:
+- Tổng số outfit: ${stats.totalOutfits}
+- Số ngày ghi chép: ${stats.totalDaysRecorded}
+- Tháng năng suất nhất: ${stats.mostProductiveMonth}
+- Outfit được mặc nhiều nhất: ${mostWorn}
+- Top 5 món đồ yêu thích: ${topItems}
+- Các thẻ phong cách phổ biến: ${topTags}
+- Số outfit độc đáo: ${stats.uniqueOutfits}
+- Chuỗi ghi chép dài nhất: ${stats.recordingStreak} ngày
+
+YÊU CẦU:
+1. Viết 3-4 đoạn văn ngắn (khoảng 200-250 từ tổng)
+2. Phân tích phong cách cá nhân của người dùng
+3. Nhận xét về sự thay đổi/phát triển trong năm (nếu có dữ liệu đủ)
+4. Khen ngợi những điểm tích cực
+5. Đưa ra 2-3 gợi ý thú vị cho năm sau
+6. Giọng văn thân thiện, truyền cảm hứng, tích cực
+7. KHÔNG sử dụng markdown, emoji
+8. Viết bằng tiếng Việt
+
+Hãy tạo một bản tổng kết ấm áp, cá nhân hóa và đầy cảm hứng!`;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+        });
+        return response.text.trim();
+    } catch (error) {
+        console.error("Error calling Gemini API for year in review:", error);
+        return `Năm ${year} thật tuyệt vời với ${stats.totalOutfits} outfit được ghi lại! Phong cách của bạn đa dạng và độc đáo. Những món đồ yêu thích như ${topItems} đã đồng hành cùng bạn qua nhiều khoảnh khắc đáng nhớ. Năm mới, hãy tiếp tục thể hiện cá tính của mình qua thời trang nhé!`;
+    }
+};

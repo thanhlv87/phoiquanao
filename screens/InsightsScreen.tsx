@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useOutfits } from '../hooks/useOutfits';
 import { calculateOutfitStats, generateSmartSuggestions, SmartSuggestion } from '../utils/analyticsUtils';
 import { Icon } from '../components/Icon';
+import { YearInReview } from '../components/YearInReview';
 
 const SuggestionCard: React.FC<{ suggestion: SmartSuggestion }> = ({ suggestion }) => {
   const bgColors = {
@@ -38,10 +39,18 @@ const StatCard: React.FC<{ title: string; value: string | number; icon?: string 
 export const InsightsScreen: React.FC = () => {
   const { state } = useOutfits();
   const { allOutfits, loading } = state;
+  const [activeTab, setActiveTab] = useState<'overview' | 'yearInReview'>('overview');
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
 
   const outfitsArray = useMemo(() => Object.values(allOutfits), [allOutfits]);
   const stats = useMemo(() => calculateOutfitStats(outfitsArray), [outfitsArray]);
   const suggestions = useMemo(() => generateSmartSuggestions(outfitsArray), [outfitsArray]);
+
+  // Get available years from outfits
+  const availableYears = useMemo(() => {
+    const years = new Set(outfitsArray.map(o => new Date(o.date).getFullYear()));
+    return Array.from(years).sort((a, b) => b - a);
+  }, [outfitsArray]);
 
   if (loading) {
     return (
@@ -74,7 +83,54 @@ export const InsightsScreen: React.FC = () => {
         <p className="text-gray-500">Khám phá phong cách của bạn</p>
       </header>
 
-      <main className="space-y-6">
+      {/* Tab Navigation */}
+      {stats.totalOutfits > 0 && (
+        <div className="flex gap-2 mb-6 bg-white rounded-xl p-1 shadow-md">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
+              activeTab === 'overview'
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            Tổng quan
+          </button>
+          <button
+            onClick={() => setActiveTab('yearInReview')}
+            className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
+              activeTab === 'yearInReview'
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <Icon name="sparkles" className="w-4 h-4" />
+            Tổng kết năm
+          </button>
+        </div>
+      )}
+
+      {/* Year Selector (only show in Year in Review tab) */}
+      {activeTab === 'yearInReview' && availableYears.length > 1 && (
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Chọn năm:</label>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="w-full md:w-auto px-4 py-2 border-2 border-purple-200 rounded-xl bg-white text-gray-800 font-semibold focus:outline-none focus:border-purple-500 transition-all"
+          >
+            {availableYears.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Content based on active tab */}
+      {activeTab === 'yearInReview' ? (
+        <YearInReview outfits={outfitsArray} year={selectedYear} />
+      ) : (
+        <main className="space-y-6">
         {/* Quick Stats */}
         <div className="grid grid-cols-2 gap-4">
           <StatCard title="Tổng trang phục" value={stats.totalOutfits} icon="collections" />
@@ -200,7 +256,8 @@ export const InsightsScreen: React.FC = () => {
             </div>
           </section>
         )}
-      </main>
+        </main>
+      )}
     </div>
   );
 };

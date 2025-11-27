@@ -9,6 +9,17 @@ import { generateOutfitSuggestion } from '../services/geminiService';
 import { Icon } from '../components/Icon';
 import { Outfit } from '../types';
 
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) {
+    return 'Chào buổi sáng';
+  } else if (hour >= 12 && hour < 18) {
+    return 'Chào buổi chiều';
+  } else {
+    return 'Chào buổi tối';
+  }
+};
+
 const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => void }> = ({ outfits, onNavigate }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -258,13 +269,14 @@ export const HomeScreen: React.FC = () => {
   };
 
   const greetingName = user && !user.isAnonymous ? (user.displayName?.split(' ')[0] || user.email) : '';
+  const greeting = getGreeting();
 
   return (
     <div className="p-4 md:p-6 pb-20">
       <header className="mb-6">
         <div className="flex justify-between items-start">
             <div>
-                <h1 className="text-3xl font-bold text-gray-800">Chào buổi sáng{greetingName ? `, ${greetingName}` : ''}</h1>
+                <h1 className="text-3xl font-bold text-gray-800">{greeting}{greetingName ? `, ${greetingName}` : ''}</h1>
                 <p className="text-gray-500">Hôm nay bạn mặc gì?</p>
             </div>
             {user && !user.isAnonymous && (

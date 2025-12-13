@@ -23,15 +23,18 @@ export const uploadToCloudflare = async (file: File): Promise<string> => {
         throw new Error(`Failed to get an upload URL from the backend. Status: ${response.status}`);
     }
     const { uploadURL } = await response.json();
+    console.log(`Received upload URL from backend: ${uploadURL.substring(0, 20)}...`); // Log first 20 chars for security
 
     // 2. Create a FormData object and append the file.
     const formData = new FormData();
     formData.append('file', file);
 
     // 3. Upload the file directly to the Cloudflare URL.
+    // Ensure no manual Content-Type header is set, so the browser handles multipart/form-data correctly.
     const uploadResponse = await fetch(uploadURL, {
       method: 'POST',
       body: formData,
+      // Do not set 'Content-Type' header, browser will set it with the correct boundary
     });
 
     if (!uploadResponse.ok) {

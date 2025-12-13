@@ -148,3 +148,81 @@ Mở http://localhost:3000
 ---
 
 **Enjoy! 🎉**
+
+
+## Hướng dẫn kết nối Cloudflare Images
+
+Để sử dụng tính năng tải ảnh lên Cloudflare, bạn cần thiết lập một điểm cuối (endpoint) backend nhỏ để tạo URL tải lên an toàn.
+
+### 1. Biến môi trường Backend
+
+Backend của bạn sẽ cần các biến môi trường sau từ trang tổng quan Cloudflare của bạn:
+
+```
+CLOUDFLARE_ACCOUNT_ID="ID tài khoản của bạn"
+CLOUDFLARE_API_TOKEN="Mã thông báo API của bạn với quyền chỉnh sửa Hình ảnh"
+```
+
+### 2. Ví dụ về Backend (Vercel Serverless Function)
+
+Bạn có thể tạo một tệp tại `/api/generate-upload-url.js` trong dự án Vercel của mình:
+
+```javascript
+// /api/generate-upload-url.js
+
+export default async function handler(req, res) {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+
+  if (!accountId || !apiToken) {
+    return res.status(500).json({ error: 'Cloudflare credentials are not configured.' });
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/images/v2/direct_upload`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiToken}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Cloudflare API error: ${errorText}`);
+    }
+
+    const { result } = await response.json();
+    res.status(200).json({ uploadURL: result.uploadURL });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to generate upload URL.' });
+  }
+}
+```
+
+### 3. Biến môi trường Frontend
+
+Trong tệp `.env` của bạn, hãy đảm bảo bạn đã đặt biến trỏ đến điểm cuối API của mình:
+
+```
+VITE_UPLOAD_URL_GENERATOR_ENDPOINT="/api/generate-upload-url"
+```
+
+Sau khi thiết lập, tùy chọn "Cloudflare" trong ứng dụng sẽ hoạt động bằng cách gọi hàm không máy chủ này để tải ảnh lên một cách an toàn.
+
+
+### 4. Đặt biến môi trường trên Vercel
+
+Để hàm không máy chủ của bạn hoạt động khi được triển khai, bạn cần đặt các biến môi trường Cloudflare trong cài đặt dự án Vercel của mình:
+
+1.  Truy cập trang tổng quan dự án của bạn trên Vercel.
+2.  Đi tới tab **Settings**.
+3.  Chọn **Environment Variables** trong menu bên trái.
+4.  Thêm hai biến sau:
+    *   **Name:** `CLOUDFLARE_ACCOUNT_ID`, **Value:** `ID tài khoản Cloudflare của bạn`
+    *   **Name:** `CLOUDFLARE_API_TOKEN`, **Value:** `Mã thông báo API Cloudflare của bạn`
+5.  Lưu các thay đổi. Vercel sẽ tự động áp dụng các biến này cho môi trường sản xuất, xem trước và phát triển của bạn.

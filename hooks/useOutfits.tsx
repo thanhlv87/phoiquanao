@@ -14,7 +14,7 @@ interface OutfitState {
 
 const OutfitContext = createContext<{
   state: OutfitState;
-  addOrUpdateOutfit: (outfitData: Omit<Outfit, 'imageUrls'> & { newImageBase64s: string[], existingImageUrls: string[] }) => Promise<void>;
+  addOrUpdateOutfit: (outfitData: Omit<Outfit, 'imageUrls'> & { newImageBase64s?: string[], existingImageUrls: string[], newImageUrls?: string[] }) => Promise<void>;
   deleteOutfit: (outfit: Outfit) => Promise<void>;
 } | undefined>(undefined);
 
@@ -90,11 +90,17 @@ export const OutfitProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     fetchOutfits();
   }, [user]);
 
-  const addOrUpdateOutfit = useCallback(async (outfitData: Omit<Outfit, 'imageUrls'> & { newImageBase64s: string[], existingImageUrls: string[] }) => {
+  const addOrUpdateOutfit = useCallback(async (outfitData: Omit<Outfit, 'imageUrls'> & { newImageBase64s?: string[], existingImageUrls: string[], newImageUrls?: string[] }) => {
     if (!user) throw new Error("Cannot add/update outfit: User not authenticated");
 
     try {
-      const savedOutfit = await addOrUpdateOutfitService(user.uid, outfitData);
+      // Ensure default empty arrays if properties are not provided
+      const payload = {
+        ...outfitData,
+        newImageBase64s: outfitData.newImageBase64s || [],
+        newImageUrls: outfitData.newImageUrls || [],
+      };
+      const savedOutfit = await addOrUpdateOutfitService(user.uid, payload);
       
       setState(prevState => {
         const newAllOutfits = { ...prevState.allOutfits, [savedOutfit.id]: savedOutfit };

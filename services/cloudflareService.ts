@@ -1,7 +1,10 @@
 // This service will handle Cloudflare image uploads.
 // The API endpoint for your backend function that generates the Cloudflare upload URL.
 // This should be stored in an environment variable.
-const UPLOAD_URL_GENERATOR_ENDPOINT = import.meta.env.VITE_UPLOAD_URL_GENERATOR_ENDPOINT || '/api/generate-upload-url';
+// Use an absolute URL in production and a relative one in development.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const UPLOAD_URL_GENERATOR_ENDPOINT = `${API_BASE_URL}/api/generate-upload-url`;
+
 
 /**
  * Uploads a file to Cloudflare Images by first getting a one-time upload URL from our backend.
@@ -11,10 +14,13 @@ const UPLOAD_URL_GENERATOR_ENDPOINT = import.meta.env.VITE_UPLOAD_URL_GENERATOR_
 export const uploadToCloudflare = async (file: File): Promise<string> => {
   try {
     // 1. Get a one-time upload URL from your backend.
-    // Your backend would use the Cloudflare API to generate this.
+    console.log(`Requesting upload URL from: ${UPLOAD_URL_GENERATOR_ENDPOINT}`);
     const response = await fetch(UPLOAD_URL_GENERATOR_ENDPOINT);
+    
     if (!response.ok) {
-        throw new Error('Failed to get an upload URL from the backend.');
+        const errorText = await response.text();
+        console.error('Backend response (not ok):', errorText);
+        throw new Error(`Failed to get an upload URL from the backend. Status: ${response.status}`);
     }
     const { uploadURL } = await response.json();
 

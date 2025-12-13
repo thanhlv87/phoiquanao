@@ -210,7 +210,10 @@ Trong tệp `.env` của bạn, hãy đảm bảo bạn đã đặt biến trỏ
 
 ```
 VITE_UPLOAD_URL_GENERATOR_ENDPOINT="/api/generate-upload-url"
+VITE_API_BASE_URL="https://your-vercel-project-url.vercel.app"
 ```
+
+**Quan trọng:** Thay thế `https://your-vercel-project-url.vercel.app` bằng URL triển khai Vercel thực tế của bạn.
 
 Sau khi thiết lập, tùy chọn "Cloudflare" trong ứng dụng sẽ hoạt động bằng cách gọi hàm không máy chủ này để tải ảnh lên một cách an toàn.
 
@@ -222,7 +225,8 @@ Sau khi thiết lập, tùy chọn "Cloudflare" trong ứng dụng sẽ hoạt �
 1.  Truy cập trang tổng quan dự án của bạn trên Vercel.
 2.  Đi tới tab **Settings**.
 3.  Chọn **Environment Variables** trong menu bên trái.
-4.  Thêm hai biến sau:
+4.  Thêm ba biến sau:
     *   **Name:** `CLOUDFLARE_ACCOUNT_ID`, **Value:** `ID tài khoản Cloudflare của bạn`
     *   **Name:** `CLOUDFLARE_API_TOKEN`, **Value:** `Mã thông báo API Cloudflare của bạn`
+    *   **Name:** `VITE_API_BASE_URL`, **Value:** `URL triển khai Vercel của bạn (ví dụ: https://your-project.vercel.app)`
 5.  Lưu các thay đổi. Vercel sẽ tự động áp dụng các biến này cho môi trường sản xuất, xem trước và phát triển của bạn.

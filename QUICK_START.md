@@ -163,12 +163,16 @@ CLOUDFLARE_ACCOUNT_ID="ID tài khoản của bạn"
 CLOUDFLARE_API_TOKEN="Mã thông báo API của bạn với quyền chỉnh sửa Hình ảnh"
 ```
 
-### 2. Ví dụ về Backend (Vercel Serverless Function)
+### 2. Backend Function (Vercel Serverless Function)
 
-Bạn có thể tạo một tệp tại `/api/generate-upload-url.js` trong dự án Vercel của mình:
+Bạn cần tạo tệp này trong dự án của mình để Vercel có thể xử lý yêu cầu.
+
+1.  Tạo thư mục `api` ở cấp độ gốc của dự án (cùng cấp với `src`, `public`, v.v.).
+2.  Tạo tệp `generate-upload-url.js` bên trong thư mục `api`.
+3.  Sao chép nội dung sau vào tệp đó:
 
 ```javascript
-// /api/generate-upload-url.js
+// api/generate-upload-url.js
 
 export default async function handler(req, res) {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -195,14 +199,22 @@ export default async function handler(req, res) {
     }
 
     const { result } = await response.json();
-    res.status(200).json({ uploadURL: result.uploadURL });
+    res.status(20).json({ uploadURL: result.uploadURL });
 
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to generate upload URL.' });
-  }
+ }
 }
+
+export const config = {
+  api: {
+    bodyParser: false, // Disable body parsing for file uploads
+  },
+};
 ```
+
+Sau khi thêm tệp này, hãy đảm bảo rằng bạn đã triển khai lại ứng dụng của mình lên Vercel.
 
 ### 3. Biến môi trường Frontend
 

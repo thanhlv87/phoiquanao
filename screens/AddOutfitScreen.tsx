@@ -78,36 +78,36 @@ const TagInputSection: React.FC<{
 };
 
 const CollectionsSection: React.FC<{
-    selectedIds: string[];
-    onToggleId: (id: string) => void;
+  selectedIds: string[];
+  onToggleId: (id: string) => void;
 }> = ({ selectedIds, onToggleId }) => {
-    const { state } = useCollections();
-    const collections = useMemo(() => Object.values(state.collections), [state.collections]);
+  const { state } = useCollections();
+  const collections = useMemo(() => Object.values(state.collections), [state.collections]);
 
-    if (state.loading) return <p>Đang tải bộ sưu tập...</p>;
-    if (collections.length === 0) {
-        return <p className="text-sm text-gray-500 text-center">Bạn chưa có bộ sưu tập nào.</p>
-    }
+  if (state.loading) return <p>Đang tải bộ sưu tập...</p>;
+  if (collections.length === 0) {
+    return <p className="text-sm text-gray-500 text-center">Bạn chưa có bộ sưu tập nào.</p>
+  }
 
-    return (
-        <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">Bộ sưu tập</h3>
-            <div className="flex flex-wrap gap-2">
-                {collections.map(collection => {
-                    const isSelected = selectedIds.includes(collection.id);
-                    return (
-                        <button
-                            key={collection.id}
-                            onClick={() => onToggleId(collection.id)}
-                            className={`text-sm font-semibold px-4 py-2 rounded-full transition-colors ${isSelected ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                        >
-                           {collection.name}
-                        </button>
-                    )
-                })}
-            </div>
-        </div>
-    )
+  return (
+    <div className="mb-6">
+      <h3 className="text-lg font-semibold text-gray-700 mb-2">Bộ sưu tập</h3>
+      <div className="flex flex-wrap gap-2">
+        {collections.map(collection => {
+          const isSelected = selectedIds.includes(collection.id);
+          return (
+            <button
+              key={collection.id}
+              onClick={() => onToggleId(collection.id)}
+              className={`text-sm font-semibold px-4 py-2 rounded-full transition-colors ${isSelected ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              {collection.name}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 
@@ -126,7 +126,7 @@ export const AddOutfitScreen: React.FC = () => {
   const [bottoms, setBottoms] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [collectionIds, setCollectionIds] = useState<string[]>([]);
-  
+
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -174,9 +174,9 @@ export const AddOutfitScreen: React.FC = () => {
 
   const removeImage = (index: number, type: 'existing' | 'new') => {
     if (type === 'existing') {
-        setImages(prev => prev.filter((_, i) => i !== index));
+      setImages(prev => prev.filter((_, i) => i !== index));
     } else {
-        setNewImageFiles(prev => prev.filter((_, i) => i !== index));
+      setNewImageFiles(prev => prev.filter((_, i) => i !== index));
     }
   };
 
@@ -191,7 +191,7 @@ export const AddOutfitScreen: React.FC = () => {
     if (newImageFiles[0]) {
       base64Image = await fileToBase64(newImageFiles[0]);
     }
-    
+
     setIsGenerating(true);
     setError(null);
     try {
@@ -199,7 +199,7 @@ export const AddOutfitScreen: React.FC = () => {
       setTops(prev => [...new Set([...prev, ...aiTags.tops])]);
       setBottoms(prev => [...new Set([...prev, ...aiTags.bottoms])]);
       setTags(prev => [...new Set([...prev, ...aiTags.general])]);
-      
+
       aiTags.tops.forEach(t => addSuggestion('tops', t));
       aiTags.bottoms.forEach(t => addSuggestion('bottoms', t));
       aiTags.general.forEach(t => addSuggestion('tags', t));
@@ -214,68 +214,81 @@ export const AddOutfitScreen: React.FC = () => {
 
   const handleSave = async () => {
     const dateId = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    
+
     if (images.length === 0 && newImageFiles.length === 0) {
       setError("Vui lòng thêm ít nhất một hình ảnh.");
       return;
     }
     if (tops.length === 0 && bottoms.length === 0) {
-        setError("Vui lòng thêm ít nhất một thẻ cho áo hoặc quần.");
-        return;
+      setError("Vui lòng thêm ít nhất một thẻ cho áo hoặc quần.");
+      return;
     }
 
     setIsSaving(true);
     setError(null);
 
-    let newImageUrls: string[] = [];
-    if (uploadMethod === 'cloudflare') {
-        newImageUrls = await Promise.all(newImageFiles.map(file => uploadToCloudflare(file)));
-    }
+    try {
+      let newImageUrls: string[] = [];
+      if (uploadMethod === 'cloudflare') {
+        try {
+          newImageUrls = await Promise.all(newImageFiles.map(file => uploadToCloudflare(file)));
+        } catch (uploadError) {
+          console.error('Cloudflare upload failed:', uploadError);
+          setError('Không thể tải ảnh lên Cloudflare. Vui lòng kiểm tra cấu hình hoặc chuyển sang phương thức Base64.');
+          setIsSaving(false);
+          return;
+        }
+      }
 
-    const newImageBase64s = uploadMethod === 'base64'
+      const newImageBase64s = uploadMethod === 'base64'
         ? await Promise.all(newImageFiles.map(file => fileToBase64(file)))
         : [];
 
-    const outfitData = {
-      id,
-      date: new Date().toISOString(),
-      dateId,
-      newImageBase64s,
-      existingImageUrls: images,
-      newImageUrls: newImageUrls, // Pass new Cloudflare URLs
-      tops,
-      bottoms,
-      tags,
-      collectionIds,
-    };
+      const outfitData = {
+        id,
+        date: new Date().toISOString(),
+        dateId,
+        newImageBase64s,
+        existingImageUrls: images,
+        newImageUrls: newImageUrls, // Pass new Cloudflare URLs
+        tops,
+        bottoms,
+        tags,
+        collectionIds,
+      };
 
-    try {
-      await addOrUpdateOutfit(outfitData);
-      [...tops].forEach(t => addSuggestion('tops', t));
-      [...bottoms].forEach(t => addSuggestion('bottoms', t));
-      [...tags].forEach(t => addSuggestion('tags', t));
-      navigate('/');
+      try {
+        await addOrUpdateOutfit(outfitData);
+        [...tops].forEach(t => addSuggestion('tops', t));
+        [...bottoms].forEach(t => addSuggestion('bottoms', t));
+        [...tags].forEach(t => addSuggestion('tags', t));
+        navigate('/');
+      } catch (error) {
+        console.error("Error saving outfit:", error);
+        setError("Không thể lưu trang phục. Vui lòng thử lại.");
+        setIsSaving(false);
+      }
     } catch (error) {
-      console.error("Error saving outfit:", error);
-      setError("Không thể lưu trang phục. Vui lòng thử lại.");
+      console.error("Unexpected error in handleSave:", error);
+      setError("Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.");
       setIsSaving(false);
     }
   };
-  
+
   const handleDelete = async () => {
     if (!isEditMode || !existingOutfit) return;
-    
+
     if (window.confirm("Bạn có chắc chắn muốn xóa trang phục này?")) {
-        setIsDeleting(true);
-        setError(null);
-        try {
-            await deleteOutfit(existingOutfit);
-            navigate('/');
-        } catch (error) {
-            console.error("Error deleting outfit:", error);
-            setError("Không thể xóa trang phục. Vui lòng thử lại.");
-            setIsDeleting(false);
-        }
+      setIsDeleting(true);
+      setError(null);
+      try {
+        await deleteOutfit(existingOutfit);
+        navigate('/');
+      } catch (error) {
+        console.error("Error deleting outfit:", error);
+        setError("Không thể xóa trang phục. Vui lòng thử lại.");
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -286,12 +299,12 @@ export const AddOutfitScreen: React.FC = () => {
   const removeTagCallback = useCallback((setter: React.Dispatch<React.SetStateAction<string[]>>, tagToRemove: string) => {
     setter(prev => prev.filter(tag => tag !== tagToRemove));
   }, []);
-  
+
   const handleToggleCollectionId = useCallback((idToToggle: string) => {
     setCollectionIds(prev =>
-        prev.includes(idToToggle)
-            ? prev.filter(id => id !== idToToggle)
-            : [...prev, idToToggle]
+      prev.includes(idToToggle)
+        ? prev.filter(id => id !== idToToggle)
+        : [...prev, idToToggle]
     );
   }, []);
 
@@ -354,22 +367,22 @@ export const AddOutfitScreen: React.FC = () => {
           </div>
         )}
 
-       <div className="mb-4">
-           <h3 className="text-lg font-semibold text-gray-700 mb-2">Phương thức tải ảnh lên</h3>
-           <div className="flex items-center gap-4">
-               <label className="flex items-center cursor-pointer">
-                   <input type="radio" name="uploadMethod" value="base64" checked={uploadMethod === 'base64'} onChange={() => setUploadMethod('base64')} className="form-radio h-4 w-4 text-purple-600"/>
-                   <span className="ml-2 text-gray-700">Lưu trực tiếp (Base64)</span>
-               </label>
-               <label className="flex items-center cursor-pointer">
-                   <input type="radio" name="uploadMethod" value="cloudflare" checked={uploadMethod === 'cloudflare'} onChange={() => setUploadMethod('cloudflare')} className="form-radio h-4 w-4 text-purple-600"/>
-                   <span className="ml-2 text-gray-700">Cloudflare</span>
-               </label>
-           </div>
-       </div>
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-gray-700 mb-2">Phương thức tải ảnh lên</h3>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center cursor-pointer">
+              <input type="radio" name="uploadMethod" value="base64" checked={uploadMethod === 'base64'} onChange={() => setUploadMethod('base64')} className="form-radio h-4 w-4 text-purple-600" />
+              <span className="ml-2 text-gray-700">Lưu trực tiếp (Base64)</span>
+            </label>
+            <label className="flex items-center cursor-pointer">
+              <input type="radio" name="uploadMethod" value="cloudflare" checked={uploadMethod === 'cloudflare'} onChange={() => setUploadMethod('cloudflare')} className="form-radio h-4 w-4 text-purple-600" />
+              <span className="ml-2 text-gray-700">Cloudflare</span>
+            </label>
+          </div>
+        </div>
 
-       <button
-         onClick={handleGenerateTags}
+        <button
+          onClick={handleGenerateTags}
           disabled={allImages.length === 0 || isGenerating}
           className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-glow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mb-6 transform hover:scale-105"
         >
@@ -379,16 +392,16 @@ export const AddOutfitScreen: React.FC = () => {
             <><Icon name="sparkles" className="w-5 h-5" /><span>Tạo thẻ bằng AI (từ ảnh đầu tiên)</span></>
           )}
         </button>
-        
+
         {error && <p className="bg-red-100 text-red-700 text-center p-3 rounded-lg mb-4 text-sm">{error}</p>}
-        
+
         <div className="bg-white/80 backdrop-blur-xl p-6 rounded-2xl shadow-xl">
-            <TagInputSection title="Áo" tags={tops} suggestions={suggestions.tops} onAddTag={(tag) => addTagCallback(setTops, tag)} onRemoveTag={(tag) => removeTagCallback(setTops, tag)} onSuggestionClick={(tag) => addTagCallback(setTops, tag)} />
-            <TagInputSection title="Quần" tags={bottoms} suggestions={suggestions.bottoms} onAddTag={(tag) => addTagCallback(setBottoms, tag)} onRemoveTag={(tag) => removeTagCallback(setBottoms, tag)} onSuggestionClick={(tag) => addTagCallback(setBottoms, tag)} />
-            <TagInputSection title="Thẻ chung" tags={tags} suggestions={suggestions.tags} onAddTag={(tag) => addTagCallback(setTags, tag)} onRemoveTag={(tag) => removeTagCallback(setTags, tag)} onSuggestionClick={(tag) => addTagCallback(setTags, tag)} />
-            <CollectionsSection selectedIds={collectionIds} onToggleId={handleToggleCollectionId} />
+          <TagInputSection title="Áo" tags={tops} suggestions={suggestions.tops} onAddTag={(tag) => addTagCallback(setTops, tag)} onRemoveTag={(tag) => removeTagCallback(setTops, tag)} onSuggestionClick={(tag) => addTagCallback(setTops, tag)} />
+          <TagInputSection title="Quần" tags={bottoms} suggestions={suggestions.bottoms} onAddTag={(tag) => addTagCallback(setBottoms, tag)} onRemoveTag={(tag) => removeTagCallback(setBottoms, tag)} onSuggestionClick={(tag) => addTagCallback(setBottoms, tag)} />
+          <TagInputSection title="Thẻ chung" tags={tags} suggestions={suggestions.tags} onAddTag={(tag) => addTagCallback(setTags, tag)} onRemoveTag={(tag) => removeTagCallback(setTags, tag)} onSuggestionClick={(tag) => addTagCallback(setTags, tag)} />
+          <CollectionsSection selectedIds={collectionIds} onToggleId={handleToggleCollectionId} />
         </div>
-        
+
         <div className="mt-8 flex items-center gap-4">
           <button onClick={handleSave} disabled={isSaving || isDeleting} className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-glow-lg transition-all duration-300 disabled:opacity-50 transform hover:scale-105">
             {isSaving ? 'Đang lưu...' : (isEditMode ? 'Cập nhật' : 'Lưu trang phục')}

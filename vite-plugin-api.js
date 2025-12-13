@@ -30,6 +30,15 @@ export default function apiPlugin() {
                         return;
                     }
 
+                    // Check for placeholder values
+                    if (accountId.includes('your_') || apiToken.includes('your_')) {
+                        console.error('[API] Cloudflare credentials are still placeholder values');
+                        res.statusCode = 500;
+                        res.setHeader('Content-Type', 'application/json');
+                        res.end(JSON.stringify({ error: 'Cloudflare credentials in .env are placeholder values. Please update with real credentials.' }));
+                        return;
+                    }
+
                     console.log(`[API] Attempting to get upload URL for account: ${accountId.substring(0, 6)}...`);
 
                     try {

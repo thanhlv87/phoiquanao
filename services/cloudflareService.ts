@@ -16,11 +16,16 @@ export const uploadToCloudflare = async (file: File): Promise<string> => {
     // 1. Get a one-time upload URL from your backend.
     console.log(`Requesting upload URL from: ${UPLOAD_URL_GENERATOR_ENDPOINT}`);
     const response = await fetch(UPLOAD_URL_GENERATOR_ENDPOINT);
-    
+
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Backend response (not ok):', errorText);
-        throw new Error(`Failed to get an upload URL from the backend. Status: ${response.status}`);
+      const errorText = await response.text();
+      console.error('Backend response (not ok):', errorText);
+      console.error('Response status:', response.status);
+
+      if (response.status === 500) {
+        throw new Error('Lỗi server: Không thể tạo URL upload. Vui lòng kiểm tra cấu hình Cloudflare trong file .env');
+      }
+      throw new Error(`Không thể lấy URL upload từ backend. Mã lỗi: ${response.status}`);
     }
     const { uploadURL } = await response.json();
     console.log(`Received upload URL from backend: ${uploadURL.substring(0, 20)}...`); // Log first 20 chars for security
@@ -38,19 +43,26 @@ export const uploadToCloudflare = async (file: File): Promise<string> => {
     });
 
     if (!uploadResponse.ok) {
-      throw new Error('Cloudflare upload failed.');
+      const errorText = await uploadResponse.text();
+      console.error('Cloudflare upload error:', errorText);
+      console.error('Upload response status:', uploadResponse.status);
+
+      if (uploadResponse.status === 403) {
+        throw new Error('Lỗi 403: Cloudflare từ chối upload. Vui lòng kiểm tra API Token có quyền "Cloudflare Images Write".');
+      }
+      throw new Error(`Upload lên Cloudflare thất bại. Mã lỗi: ${uploadResponse.status}`);
     }
 
     const result = await uploadResponse.json();
-    
+
     // 4. Extract the public URL of the uploaded image.
     // The structure of the result object might vary. Check Cloudflare's documentation.
     const publicUrl = result.result.variants[0]; // Example: getting the public variant
-    
+
     if (!publicUrl) {
-        throw new Error('Could not get public URL from Cloudflare response.');
+      throw new Error('Could not get public URL from Cloudflare response.');
     }
-    
+
     console.log(`Successfully uploaded to Cloudflare: ${publicUrl}`);
     return publicUrl;
 

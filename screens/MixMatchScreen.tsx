@@ -151,11 +151,8 @@ const DeleteConfirmationModal: React.FC<{
     );
 };
 
-// Utility to convert URL to Base64 (needed because Gemini API likes Base64 in inlineData)
 const urlToBase64 = async (url: string): Promise<string> => {
     try {
-        // Attempt to fetch with CORS mode.
-        // If Firebase Storage is not configured for CORS, this will likely fail.
         const response = await fetch(url, { mode: 'cors' });
         if (!response.ok) throw new Error(`Fetch failed with status: ${response.status}`);
         const blob = await response.blob();
@@ -166,14 +163,20 @@ const urlToBase64 = async (url: string): Promise<string> => {
             reader.readAsDataURL(blob);
         });
     } catch (error) {
-        console.warn("Could not load image from URL (likely CORS issue). Using local cache if available.", error);
+        console.warn("Could not load image from URL (likely CORS issue).", error);
         return "";
     }
 };
 
+type ModelChoice = 'gemini-flash-lite-latest' | 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
+
 export const MixMatchScreen: React.FC = () => {
     const { state, addMix, deleteMix } = useMixes();
     const { user } = useAuth();
+    
+    const [selectedModel, setSelectedModel] = useState<ModelChoice>('gemini-2.5-flash-image');
+    const [hasProKey, setHasProKey] = useState(false);
+
     const [modelImage, setModelImage] = useState<string | null>(null);
     const [isModelLoading, setIsModelLoading] = useState(false);
     const [topImage, setTopImage] = useState<string | null>(null);
@@ -183,15 +186,22 @@ export const MixMatchScreen: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [saveStatus, setSaveStatus] = useState<'saving' | 'saved' | 'failed' | 'guest' | null>(null);
     
-    // Deletion State
     const [mixToDelete, setMixToDelete] = useState<MixResult | null>(null);
 
-    // Load default model image on mount
+    useEffect(() => {
+        const checkKey = async () => {
+            if (typeof window.aistudio?.hasSelectedApiKey === 'function') {
+                const hasKey = await window.aistudio.hasSelectedApiKey();
+                setHasProKey(hasKey);
+            }
+        };
+        checkKey();
+    }, [selectedModel]);
+
     useEffect(() => {
         const loadDefaultModel = async () => {
             if (user) {
                 setIsModelLoading(true);
-                // Strategy: Try IndexedDB cache first (fast, no CORS issues)
                 try {
                     const localBase64 = await getFromLocal(`defaultModel_${user.uid}`);
                     if (localBase64) {
@@ -203,13 +213,11 @@ export const MixMatchScreen: React.FC = () => {
                     console.warn("Failed to load from local cache", e);
                 }
 
-                // If not in cache, try Firebase URL
                 const defaultUrl = await getDefaultModel(user.uid);
                 if (defaultUrl) {
                     const base64 = await urlToBase64(defaultUrl);
                     if (base64) {
                         setModelImage(base64);
-                        // Save to cache for next time
                         await saveToLocal(`defaultModel_${user.uid}`, base64);
                     }
                 }
@@ -230,9 +238,21 @@ export const MixMatchScreen: React.FC = () => {
         }
     };
 
+    const handleOpenKeyDialog = async () => {
+        if (typeof window.aistudio?.openSelectKey === 'function') {
+            await window.aistudio.openSelectKey();
+            setHasProKey(true); // Assume success per guidelines
+        }
+    };
+
     const handleGenerate = async () => {
         if (!modelImage || !topImage || !bottomImage) {
             setError("Vui lòng tải lên đủ 3 ảnh: Người mẫu, Áo và Quần/Váy.");
+            return;
+        }
+
+        if (selectedModel === 'gemini-3-pro-image-preview' && !hasProKey) {
+            setError("Vui lòng chọn API Key cá nhân để sử dụng Model Cao Cấp.");
             return;
         }
 
@@ -243,42 +263,36 @@ export const MixMatchScreen: React.FC = () => {
 
         let generatedImageBase64 = "";
 
-        // Bước 1: Tạo ảnh
         try {
-            generatedImageBase64 = await generateMixImage(modelImage, topImage, bottomImage);
+            generatedImageBase64 = await generateMixImage(modelImage, topImage, bottomImage, selectedModel);
             setResultImage(generatedImageBase64);
-        } catch (err) {
+        } catch (err: any) {
             console.error("Generation failed", err);
-            setError("Không thể tạo ảnh phối đồ. Có thể do lỗi mạng hoặc chính sách an toàn của AI.");
+            if (err.message?.includes("Requested entity was not found")) {
+                setError("Lỗi API Key. Vui lòng chọn lại Key cá nhân.");
+                setHasProKey(false);
+            } else {
+                setError("Không thể tạo ảnh phối đồ. Hãy thử lại với Model Tiêu chuẩn.");
+            }
             setIsGenerating(false);
-            return; // Dừng nếu tạo ảnh thất bại
+            return;
         }
 
         setIsGenerating(false);
 
-        // Bước 2: Lưu ảnh (Chạy ngầm, không chặn hiển thị ảnh)
         if (generatedImageBase64) {
             if (user) {
                 setSaveStatus('saving');
                 try {
-                    // addMix trả về MixResult chứa URL ảnh remote (Firebase Storage URL)
                     const savedMix = await addMix(modelImage, topImage, bottomImage, generatedImageBase64);
                     setSaveStatus('saved');
-
-                    // Tự động lưu ảnh model hiện tại làm mặc định
-                    if (savedMix.modelImageUrl) {
+                    if (modelImage) {
                         await saveDefaultModel(user.uid, savedMix.modelImageUrl);
-                        
-                        // QUAN TRỌNG: Lưu cả bản base64 vào cache cục bộ để tránh lỗi CORS khi tải lại
-                        if (modelImage) {
-                            await saveToLocal(`defaultModel_${user.uid}`, modelImage);
-                        }
+                        await saveToLocal(`defaultModel_${user.uid}`, modelImage);
                     }
-
                 } catch (saveError) {
                     console.error("Auto-save failed", saveError);
                     setSaveStatus('failed');
-                    // Không set Error chính để tránh che mất ảnh kết quả
                 }
             } else {
                 setSaveStatus('guest');
@@ -292,7 +306,6 @@ export const MixMatchScreen: React.FC = () => {
                 await deleteMix(mixToDelete.id, mixToDelete.resultImageUrl);
             } catch (err) {
                 console.error("Delete failed", err);
-                alert("Xóa thất bại. Vui lòng thử lại."); // Fallback alert if optimistic update fails badly
             } finally {
                 setMixToDelete(null);
             }
@@ -307,12 +320,68 @@ export const MixMatchScreen: React.FC = () => {
                 onConfirm={confirmDelete} 
             />
 
-            <header className="mb-6">
-                <h1 className="text-3xl font-bold text-gray-800">Phối Đồ AI</h1>
-                <p className="text-gray-500">Thử trang phục ảo ngay lập tức.</p>
+            <header className="mb-6 flex justify-between items-start">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-800">Phối Đồ AI</h1>
+                    <p className="text-gray-500">Thử trang phục ảo ngay lập tức.</p>
+                </div>
             </header>
 
             <main>
+                {/* Model Selector */}
+                <div className="mb-6 bg-white p-2 rounded-xl shadow-sm border border-gray-100">
+                    <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
+                        <button 
+                            onClick={() => setSelectedModel('gemini-flash-lite-latest')}
+                            className={`flex-1 min-w-[100px] py-2.5 text-[10px] font-bold rounded-lg transition-all ${selectedModel === 'gemini-flash-lite-latest' ? 'bg-green-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
+                        >
+                            Tiết kiệm (Lite)
+                        </button>
+                        <button 
+                            onClick={() => setSelectedModel('gemini-2.5-flash-image')}
+                            className={`flex-1 min-w-[100px] py-2.5 text-[10px] font-bold rounded-lg transition-all ${selectedModel === 'gemini-2.5-flash-image' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
+                        >
+                            Tiêu chuẩn (2.5)
+                        </button>
+                        <button 
+                            onClick={() => setSelectedModel('gemini-3-pro-image-preview')}
+                            className={`flex-1 min-w-[100px] py-2.5 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${selectedModel === 'gemini-3-pro-image-preview' ? 'bg-purple-600 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
+                        >
+                            <Icon name="sparkles" className={`w-4 h-4 ${selectedModel === 'gemini-3-pro-image-preview' ? 'text-white' : 'text-yellow-500'}`} />
+                            Cao cấp (3 Pro)
+                        </button>
+                    </div>
+                    {selectedModel === 'gemini-3-pro-image-preview' && (
+                        <div className="mt-3 px-2 pb-1 animate-fade-in">
+                            <p className="text-[11px] text-gray-500 italic mb-2">
+                                Model Cao Cấp cho chất lượng ảnh 1K siêu thực. Yêu cầu <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" className="text-purple-600 underline">Project trả phí</a>.
+                            </p>
+                            {!hasProKey ? (
+                                <button 
+                                    onClick={handleOpenKeyDialog}
+                                    className="w-full py-2 bg-purple-50 text-purple-700 text-xs font-bold rounded-md border border-purple-200 hover:bg-purple-100 transition-colors"
+                                >
+                                    Chọn API Key cá nhân
+                                </button>
+                            ) : (
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-bold text-green-600 flex items-center gap-1">
+                                        <div className="w-2 h-2 rounded-full bg-green-500"></div> API Key đã sẵn sàng
+                                    </span>
+                                    <button onClick={handleOpenKeyDialog} className="text-[10px] text-gray-400 hover:text-purple-600">Thay đổi</button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {selectedModel === 'gemini-flash-lite-latest' && (
+                        <div className="mt-2 px-2 pb-1 animate-fade-in">
+                            <p className="text-[10px] text-gray-500 italic">
+                                Model Lite nhẹ hơn, phù hợp để thử nghiệm nhanh và tiết kiệm tài nguyên.
+                            </p>
+                        </div>
+                    )}
+                </div>
+
                 <div className="grid grid-cols-3 gap-3 mb-6">
                     <ImageUploader 
                         label="Người mẫu" 
@@ -337,8 +406,8 @@ export const MixMatchScreen: React.FC = () => {
 
                 <button
                     onClick={handleGenerate}
-                    disabled={isGenerating || !modelImage || !topImage || !bottomImage}
-                    className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold py-3 rounded-xl shadow-lg hover:from-pink-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-8"
+                    disabled={isGenerating || !modelImage || !topImage || !bottomImage || (selectedModel === 'gemini-3-pro-image-preview' && !hasProKey)}
+                    className={`w-full text-white font-bold py-3 rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-8 ${selectedModel === 'gemini-3-pro-image-preview' ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700' : selectedModel === 'gemini-flash-lite-latest' ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700' : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700'}`}
                 >
                     {isGenerating ? (
                         <>
@@ -348,7 +417,7 @@ export const MixMatchScreen: React.FC = () => {
                     ) : (
                         <>
                             <Icon name="sparkles" className="w-5 h-5" />
-                            <span>Mix Ngay</span>
+                            <span>Mix Ngay ({selectedModel === 'gemini-3-pro-image-preview' ? 'Pro' : selectedModel === 'gemini-flash-lite-latest' ? 'Lite' : 'Flash'})</span>
                         </>
                     )}
                 </button>
@@ -357,7 +426,12 @@ export const MixMatchScreen: React.FC = () => {
 
                 {resultImage && (
                     <div className="bg-white p-4 rounded-2xl shadow-xl mb-8 animate-fade-in border border-purple-100">
-                        <h2 className="text-lg font-bold text-gray-800 mb-3 text-center">Kết quả</h2>
+                        <div className="flex justify-between items-center mb-3 px-1">
+                            <h2 className="text-lg font-bold text-gray-800">Kết quả</h2>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${selectedModel === 'gemini-3-pro-image-preview' ? 'bg-purple-100 text-purple-700' : selectedModel === 'gemini-flash-lite-latest' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {selectedModel === 'gemini-3-pro-image-preview' ? '3 Pro Image' : selectedModel === 'gemini-flash-lite-latest' ? 'Flash Lite' : '2.5 Flash'}
+                            </span>
+                        </div>
                         <div className="aspect-[3/4] w-full rounded-xl overflow-hidden shadow-inner bg-gray-100">
                             <img src={resultImage} alt="Mix Result" className="w-full h-full object-cover" />
                         </div>

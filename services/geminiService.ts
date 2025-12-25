@@ -2,14 +2,20 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AiTags } from '../types';
 
-if (!process.env.API_KEY) {
-  console.warn("API_KEY environment variable not set. AI features will be disabled.");
-}
+// Xóa khởi tạo global để tránh crash app ngay khi load
+// const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+const getAiClient = () => {
+  if (!process.env.API_KEY) {
+    console.warn("API_KEY not found.");
+    return null;
+  }
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+};
 
 export const generateTagsFromImage = async (base64Image: string): Promise<AiTags> => {
-  if (!process.env.API_KEY) {
+  const ai = getAiClient();
+  if (!ai) {
     // Return mock data if API key is not available
     return {
       tops: ["Áo phông", "Áo họa tiết"],
@@ -85,7 +91,8 @@ export const generateTagsFromImage = async (base64Image: string): Promise<AiTags
 };
 
 export const generateOutfitSuggestion = async (tags: string[]): Promise<string> => {
-    if (!process.env.API_KEY) {
+    const ai = getAiClient();
+    if (!ai) {
         return "Hãy thử một phong cách cổ điển: áo phông trắng, quần jeans xanh và đôi giày sneaker yêu thích của bạn. Đơn giản, thoải mái và luôn hợp thời trang!";
     }
 
@@ -104,7 +111,8 @@ export const generateOutfitSuggestion = async (tags: string[]): Promise<string> 
 };
 
 export const generateMixImage = async (modelBase64: string, topBase64: string, bottomBase64: string): Promise<string> => {
-    if (!process.env.API_KEY) {
+    const ai = getAiClient();
+    if (!ai) {
         throw new Error("API Key is missing");
     }
 

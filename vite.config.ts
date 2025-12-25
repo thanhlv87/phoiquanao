@@ -1,3 +1,4 @@
+
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -7,9 +8,8 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      // Polyfill process.env để code hiện tại (dùng process.env.API_KEY) hoạt động được trên Vite
-      'process.env.API_KEY': JSON.stringify(env.API_KEY),
-      // Giữ lại process.env.NODE_ENV
+      // Polyfill process.env và đảm bảo giá trị chuỗi rỗng nếu không có key
+      'process.env.API_KEY': JSON.stringify(env.API_KEY || ''),
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
     },
   };

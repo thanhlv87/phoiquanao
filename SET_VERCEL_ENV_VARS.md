@@ -46,29 +46,6 @@ Value: 1:745091328901:web:557b8bb09aa74ec17b72ec
 
 ---
 
-## ☁️ Cloudflare Image Upload Variables
-
-### 8. CLOUDFLARE_ACCOUNT_ID
-```
-Name: CLOUDFLARE_ACCOUNT_ID
-Value: [your_cloudflare_account_id]
-```
-
-### 9. CLOUDFLARE_API_TOKEN
-```
-Name: CLOUDFLARE_API_TOKEN
-Value: [your_cloudflare_api_token]
-```
-
-### 10. VITE_API_BASE_URL
-```
-Name: VITE_API_BASE_URL
-Value: https://your-project-name.vercel.app
-```
-**Lưu ý:** Thay `https://your-project-name.vercel.app` bằng URL triển khai Vercel thực tế của bạn.
-
----
-
 ## 🔧 Cách thêm trên Vercel
 
 ### Bước 1: Vào Settings
@@ -106,8 +83,6 @@ Sau khi add xong tất cả các biến:
 - [ ] VITE_FIREBASE_STORAGE_BUCKET
 - [ ] VITE_FIREBASE_MESSAGING_SENDER_ID
 - [ ] VITE_FIREBASE_APP_ID
-- [ ] CLOUDFLARE_ACCOUNT_ID
-- [ ] CLOUDFLARE_API_TOKEN
 - [ ] VITE_API_BASE_URL
 - [ ] All environments selected (3/3)
 - [ ] Redeploy triggered

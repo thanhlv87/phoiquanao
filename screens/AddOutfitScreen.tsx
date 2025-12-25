@@ -5,7 +5,6 @@ import { useCollections } from '../hooks/useCollections';
 import { useTagSuggestions } from '../hooks/useTagSuggestions';
 import { fileToBase64 } from '../utils/imageUtils';
 import { generateTagsFromImage } from '../services/geminiService';
-import { uploadToCloudflare } from '../services/cloudflareService';
 import { parseDateString, formatDate } from '../utils/dateUtils';
 import { Icon } from '../components/Icon';
 import { AiTags, Outfit } from '../types';
@@ -121,7 +120,6 @@ export const AddOutfitScreen: React.FC = () => {
   const [id, setId] = useState<string>('');
   const [images, setImages] = useState<string[]>([]);
   const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
-  const [uploadMethod, setUploadMethod] = useState<'base64' | 'cloudflare'>('base64');
   const [tops, setTops] = useState<string[]>([]);
   const [bottoms, setBottoms] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
@@ -228,21 +226,7 @@ export const AddOutfitScreen: React.FC = () => {
     setError(null);
 
     try {
-      let newImageUrls: string[] = [];
-      if (uploadMethod === 'cloudflare') {
-        try {
-          newImageUrls = await Promise.all(newImageFiles.map(file => uploadToCloudflare(file)));
-        } catch (uploadError) {
-          console.error('Cloudflare upload failed:', uploadError);
-          setError('Không thể tải ảnh lên Cloudflare. Vui lòng kiểm tra cấu hình hoặc chuyển sang phương thức Base64.');
-          setIsSaving(false);
-          return;
-        }
-      }
-
-      const newImageBase64s = uploadMethod === 'base64'
-        ? await Promise.all(newImageFiles.map(file => fileToBase64(file)))
-        : [];
+      const newImageBase64s = await Promise.all(newImageFiles.map(file => fileToBase64(file)));
 
       const outfitData = {
         id,
@@ -250,7 +234,7 @@ export const AddOutfitScreen: React.FC = () => {
         dateId,
         newImageBase64s,
         existingImageUrls: images,
-        newImageUrls: newImageUrls, // Pass new Cloudflare URLs
+        newImageUrls: [], // No longer uploading to Cloudflare
         tops,
         bottoms,
         tags,
@@ -366,20 +350,6 @@ export const AddOutfitScreen: React.FC = () => {
             ))}
           </div>
         )}
-
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">Phương thức tải ảnh lên</h3>
-          <div className="flex items-center gap-4">
-            <label className="flex items-center cursor-pointer">
-              <input type="radio" name="uploadMethod" value="base64" checked={uploadMethod === 'base64'} onChange={() => setUploadMethod('base64')} className="form-radio h-4 w-4 text-purple-600" />
-              <span className="ml-2 text-gray-700">Lưu trực tiếp (Base64)</span>
-            </label>
-            <label className="flex items-center cursor-pointer">
-              <input type="radio" name="uploadMethod" value="cloudflare" checked={uploadMethod === 'cloudflare'} onChange={() => setUploadMethod('cloudflare')} className="form-radio h-4 w-4 text-purple-600" />
-              <span className="ml-2 text-gray-700">Cloudflare</span>
-            </label>
-          </div>
-        </div>
 
         <button
           onClick={handleGenerateTags}

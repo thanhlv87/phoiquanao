@@ -44,7 +44,7 @@ export const getOutfits = async (userId: string): Promise<Outfit[]> => {
 
 export const addOrUpdateOutfit = async (
   userId: string,
-  outfitData: Omit<Outfit, 'imageUrls'> & { newImageBase64s: string[], existingImageUrls: string[], newImageUrls: string[] }
+  outfitData: Omit<Outfit, 'imageUrls'> & { newImageBase64s: string[], existingImageUrls: string[] }
 ): Promise<Outfit> => {
   try {
     const isUpdating = !!outfitData.id;
@@ -57,11 +57,10 @@ export const addOrUpdateOutfit = async (
     // Upload new base64 images to Firebase Storage
     const uploadedImageUrls = await uploadOutfitImages(userId, outfitId, outfitData.newImageBase64s);
     
-    // Combine existing URLs, new Firebase URLs, and new Cloudflare URLs
+    // Combine existing URLs and new Firebase URLs
     const finalImageUrls = [
         ...outfitData.existingImageUrls,
-        ...uploadedImageUrls,
-        ...(outfitData.newImageUrls || [])
+        ...uploadedImageUrls
     ];
 
     const outfitForFirestore: Outfit = {

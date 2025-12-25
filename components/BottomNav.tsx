@@ -3,7 +3,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Icon } from './Icon';
 
-const NavItem: React.FC<{ to: string; icon: 'home' | 'calendar' | 'search' | 'collections' | 'mix' | 'chart-bar'; label: string }> = ({ to, icon, label }) => {
+const NavItem: React.FC<{ to: string; icon: 'home' | 'calendar' | 'search' | 'collections' | 'mix' | 'chart-bar' | 'sparkles'; label: string }> = ({ to, icon, label }) => {
   const activeClass = "text-blue-600";
   const inactiveClass = "text-gray-500";
 
@@ -14,7 +14,7 @@ const NavItem: React.FC<{ to: string; icon: 'home' | 'calendar' | 'search' | 'co
         `flex flex-col items-center justify-center w-full pt-2 pb-1 transition-colors ${isActive ? activeClass : inactiveClass}`
       }
     >
-      <Icon name={icon} className="w-6 h-6 mb-1" />
+      <Icon name={icon as any} className="w-6 h-6 mb-1" />
       <span className="text-[10px] font-medium">{label}</span>
     </NavLink>
   );

@@ -162,49 +162,63 @@ export const generateCoordinatedImage = async (modelBase64: string, topBase64: s
     throw new Error("API_KEY not set");
   }
 
+  // Remove the data URL prefix to get pure base64
   const modelData = modelBase64.split(',')[1];
   const topData = topBase64.split(',')[1];
   const bottomData = bottomBase64.split(',')[1];
 
   try {
-    // Step 1: Use Gemini to analyze the images and create a detailed prompt
-    const analysisResponse = await ai.models.generateContent({
-      model: "gemini-2.0-flash-exp",
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash-exp", // Using the image-capable model
       contents: {
         parts: [
+          // Image 1: Model (person)
           { inlineData: { mimeType: 'image/jpeg', data: modelData } },
+          // Image 2: Top (shirt/blouse/jacket)
           { inlineData: { mimeType: 'image/jpeg', data: topData } },
+          // Image 3: Bottom (pants/skirt)
           { inlineData: { mimeType: 'image/jpeg', data: bottomData } },
-          { text: "Phân tích 3 hình ảnh: người mẫu, áo và quần. Tạo một prompt chi tiết bằng tiếng Anh để tạo ảnh người mẫu mặc bộ trang phục này. Bao gồm: tư thế, góc chụp, màu sắc, phong cách, chi tiết quần áo. Chỉ trả về prompt, không giải thích thêm." },
+          // Prompt
+          {
+            text: `You are an expert fashion stylist and image compositor.
+
+Task: Create a photorealistic image of the person in the first image wearing the clothes from the second and third images.
+
+Inputs:
+1. Image of a person (the model).
+2. Image of a top (shirt/blouse/jacket).
+3. Image of a bottom (pants/skirt).
+
+Requirements:
+- Retain the pose, body shape, and background of the person in the first image.
+- Naturally fit the top from image 2 onto the person's torso.
+- Naturally fit the bottom from image 3 onto the person's legs.
+- Ensure lighting and shadows are consistent with the original photo.
+- High quality, photorealistic output.
+
+Return the composed image.` },
         ],
       },
     });
 
-    const prompt = analysisResponse.text.trim();
-    console.log("Generated prompt:", prompt);
-
-    // Step 2: Use Imagen 3 to generate the coordinated image
-    const imageResponse = await ai.models.generateImages({
-      model: "imagen-3.0-generate-001",
-      prompt: prompt,
-      config: {
-        numberOfImages: 1,
-        aspectRatio: "3:4",
-      }
-    });
-
-    // Get the generated image
-    if (imageResponse.images && imageResponse.images.length > 0) {
-      const generatedImage = imageResponse.images[0];
-      // The image should be in base64 format
-      if (generatedImage.image) {
-        return `data:image/png;base64,${generatedImage.image}`;
+    // Search for the generated image in the response
+    const candidates = response.response?.candidates;
+    if (candidates && candidates.length > 0) {
+      const parts = candidates[0]?.content?.parts;
+      if (parts) {
+        // Find the part containing the generated image
+        const imagePart = parts.find(p => p.inlineData);
+        if (imagePart?.inlineData?.data) {
+          const mimeType = imagePart.inlineData.mimeType || 'image/png';
+          return `data:${mimeType};base64,${imagePart.inlineData.data}`;
+        }
       }
     }
 
-    throw new Error("No image generated from Imagen 3");
+    // If no image is returned, throw an error
+    throw new Error("No image generated from AI model");
   } catch (error) {
-    console.error("Error calling Gemini for coordination:", error);
+    console.error("Error calling Gemini for virtual try-on:", error);
     throw error;
   }
 };

@@ -21,3 +21,13 @@ export interface Collection {
   name: string;
   description: string;
 }
+
+export interface ModelCoordinate {
+  id: string;
+  userId: string;
+  modelImageUrl: string;
+  topImageUrl: string;
+  bottomImageUrl: string;
+  resultImageUrl: string;
+  createdAt: string;
+}

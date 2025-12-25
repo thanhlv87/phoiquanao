@@ -234,7 +234,6 @@ export const AddOutfitScreen: React.FC = () => {
         dateId,
         newImageBase64s,
         existingImageUrls: images,
-        newImageUrls: [], // No longer uploading to Cloudflare
         tops,
         bottoms,
         tags,

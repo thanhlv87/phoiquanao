@@ -14,7 +14,7 @@ interface OutfitState {
 
 const OutfitContext = createContext<{
   state: OutfitState;
-  addOrUpdateOutfit: (outfitData: Omit<Outfit, 'imageUrls'> & { newImageBase64s?: string[], existingImageUrls: string[], newImageUrls?: string[] }) => Promise<void>;
+  addOrUpdateOutfit: (outfitData: Omit<Outfit, 'imageUrls'> & { newImageBase64s?: string[], existingImageUrls: string[] }) => Promise<void>;
   deleteOutfit: (outfit: Outfit) => Promise<void>;
 } | undefined>(undefined);
 
@@ -65,16 +65,16 @@ export const OutfitProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         const allOutfits: Record<string, Outfit> = {};
 
         outfitsData.forEach(outfit => {
-            allOutfits[outfit.id] = outfit;
-            if (!outfitsByDate[outfit.dateId]) {
-                outfitsByDate[outfit.dateId] = [];
-            }
-            outfitsByDate[outfit.dateId].push(outfit);
+          allOutfits[outfit.id] = outfit;
+          if (!outfitsByDate[outfit.dateId]) {
+            outfitsByDate[outfit.dateId] = [];
+          }
+          outfitsByDate[outfit.dateId].push(outfit);
         });
 
         // Sort outfits within each day by date (newest first)
         for (const dateId in outfitsByDate) {
-            outfitsByDate[dateId].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          outfitsByDate[dateId].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         }
 
         setState({ outfitsByDate, allOutfits, loading: false, error: null });
@@ -90,7 +90,7 @@ export const OutfitProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     fetchOutfits();
   }, [user]);
 
-  const addOrUpdateOutfit = useCallback(async (outfitData: Omit<Outfit, 'imageUrls'> & { newImageBase64s?: string[], existingImageUrls: string[], newImageUrls?: string[] }) => {
+  const addOrUpdateOutfit = useCallback(async (outfitData: Omit<Outfit, 'imageUrls'> & { newImageBase64s?: string[], existingImageUrls: string[] }) => {
     if (!user) throw new Error("Cannot add/update outfit: User not authenticated");
 
     try {
@@ -98,28 +98,27 @@ export const OutfitProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       const payload = {
         ...outfitData,
         newImageBase64s: outfitData.newImageBase64s || [],
-        newImageUrls: outfitData.newImageUrls || [],
       };
       const savedOutfit = await addOrUpdateOutfitService(user.uid, payload);
-      
+
       setState(prevState => {
         const newAllOutfits = { ...prevState.allOutfits, [savedOutfit.id]: savedOutfit };
-        
+
         const newOutfitsByDate = { ...prevState.outfitsByDate };
         const dateId = savedOutfit.dateId;
-        
+
         const outfitsForDay = newOutfitsByDate[dateId] ? [...newOutfitsByDate[dateId]] : [];
         const existingIndex = outfitsForDay.findIndex(o => o.id === savedOutfit.id);
 
         if (existingIndex > -1) {
-            outfitsForDay[existingIndex] = savedOutfit; // Update
+          outfitsForDay[existingIndex] = savedOutfit; // Update
         } else {
-            outfitsForDay.push(savedOutfit); // Add
+          outfitsForDay.push(savedOutfit); // Add
         }
-        
+
         outfitsForDay.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         newOutfitsByDate[dateId] = outfitsForDay;
-        
+
         return {
           ...prevState,
           error: null,
@@ -142,17 +141,17 @@ export const OutfitProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     // Optimistic UI update
     setState(prevState => {
-        const newAllOutfits = { ...prevState.allOutfits };
-        delete newAllOutfits[id];
-        
-        const newOutfitsByDate = { ...prevState.outfitsByDate };
-        if (newOutfitsByDate[dateId]) {
-            newOutfitsByDate[dateId] = newOutfitsByDate[dateId].filter(o => o.id !== id);
-            if(newOutfitsByDate[dateId].length === 0) {
-                delete newOutfitsByDate[dateId];
-            }
+      const newAllOutfits = { ...prevState.allOutfits };
+      delete newAllOutfits[id];
+
+      const newOutfitsByDate = { ...prevState.outfitsByDate };
+      if (newOutfitsByDate[dateId]) {
+        newOutfitsByDate[dateId] = newOutfitsByDate[dateId].filter(o => o.id !== id);
+        if (newOutfitsByDate[dateId].length === 0) {
+          delete newOutfitsByDate[dateId];
         }
-        return { ...prevState, allOutfits: newAllOutfits, outfitsByDate: newOutfitsByDate, error: null };
+      }
+      return { ...prevState, allOutfits: newAllOutfits, outfitsByDate: newOutfitsByDate, error: null };
     });
 
     try {

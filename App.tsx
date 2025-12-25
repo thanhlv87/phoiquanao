@@ -9,6 +9,7 @@ import { SearchScreen } from './screens/SearchScreen';
 import { CollectionsScreen } from './screens/CollectionsScreen';
 import { CollectionDetailScreen } from './screens/CollectionDetailScreen';
 import { InsightsScreen } from './screens/InsightsScreen';
+import { ModelCoordinationScreen } from './screens/ModelCoordinationScreen';
 import { BottomNav } from './components/BottomNav';
 import { OutfitProvider } from './hooks/useOutfits';
 import { AuthProvider } from './hooks/useAuth';
@@ -31,6 +32,7 @@ function App() {
                 <Route path="/collections" element={<CollectionsScreen />} />
                 <Route path="/collection/:collectionId" element={<CollectionDetailScreen />} />
                 <Route path="/insights" element={<InsightsScreen />} />
+                <Route path="/model-coordination" element={<ModelCoordinationScreen />} />
                 <Route path="/add-outfit/:date" element={<AddOutfitScreen />} />
                 <Route path="/outfit/:outfitId" element={<AddOutfitScreen />} />
                 <Route path="/auth" element={<AuthScreen />} />

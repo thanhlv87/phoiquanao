@@ -167,33 +167,42 @@ export const generateCoordinatedImage = async (modelBase64: string, topBase64: s
   const bottomData = bottomBase64.split(',')[1];
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash", // Use the most capable model
+    // Step 1: Use Gemini to analyze the images and create a detailed prompt
+    const analysisResponse = await ai.models.generateContent({
+      model: "gemini-2.0-flash-exp",
       contents: {
         parts: [
           { inlineData: { mimeType: 'image/jpeg', data: modelData } },
           { inlineData: { mimeType: 'image/jpeg', data: topData } },
           { inlineData: { mimeType: 'image/jpeg', data: bottomData } },
-          { text: "Dựa trên hình ảnh người mẫu và hai món đồ thời trang (áo và quần) được cung cấp, hãy tạo một hình ảnh phối đồ hoàn chỉnh. Người mẫu nên mặc cả hai món đồ này một cách tự nhiên và phong cách nhất. Trả về hình ảnh kết quả." },
+          { text: "Phân tích 3 hình ảnh: người mẫu, áo và quần. Tạo một prompt chi tiết bằng tiếng Anh để tạo ảnh người mẫu mặc bộ trang phục này. Bao gồm: tư thế, góc chụp, màu sắc, phong cách, chi tiết quần áo. Chỉ trả về prompt, không giải thích thêm." },
         ],
       },
-      // Note: If the model supports image generation via tools or specific response types, it would be handled here.
-      // For now, if it returns text, we handle it. But the user expects an image.
-      // In many experimental versions, Gemini can generate images when prompted.
     });
 
-    // Search for image in parts if supported, or return the first part that looks like an image
-    // For standard text models, we might need a fallback or a specific tool call.
-    // Assuming the model provides an image part in the response if image generation is active.
-    const imagePart = response.response.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-    if (imagePart?.inlineData?.data) {
-      return `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
+    const prompt = analysisResponse.text.trim();
+    console.log("Generated prompt:", prompt);
+
+    // Step 2: Use Imagen 3 to generate the coordinated image
+    const imageResponse = await ai.models.generateImages({
+      model: "imagen-3.0-generate-001",
+      prompt: prompt,
+      config: {
+        numberOfImages: 1,
+        aspectRatio: "3:4",
+      }
+    });
+
+    // Get the generated image
+    if (imageResponse.images && imageResponse.images.length > 0) {
+      const generatedImage = imageResponse.images[0];
+      // The image should be in base64 format
+      if (generatedImage.image) {
+        return `data:image/png;base64,${generatedImage.image}`;
+      }
     }
 
-    // Fallback for simulation if image generation is not directly available in this specific environment
-    // but we want to show the logic is there.
-    console.warn("No image returned from Gemini. Returning placeholder for simulation.");
-    return modelBase64; // Fallback to model image as placeholder
+    throw new Error("No image generated from Imagen 3");
   } catch (error) {
     console.error("Error calling Gemini for coordination:", error);
     throw error;

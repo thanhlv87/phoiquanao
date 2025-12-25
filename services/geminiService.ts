@@ -24,7 +24,7 @@ export const generateTagsFromImage = async (base64Image: string): Promise<AiTags
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-flash-lite-latest", // Sử dụng model Lite để xử lý nhanh và tiết kiệm
       contents: {
         parts: [
           {
@@ -94,7 +94,7 @@ export const generateOutfitSuggestion = async (tags: string[]): Promise<string> 
 
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
+            model: "gemini-flash-lite-latest", // Lite cũng rất tốt cho các gợi ý văn bản ngắn
             contents: prompt,
         });
         return response.text ? response.text.trim() : "Không thể nhận được gợi ý lúc này.";

@@ -9,6 +9,18 @@ import { compressImage } from '../utils/imageCompression';
 import { MixResult } from '../types';
 import { getDefaultModel, saveDefaultModel } from '../services/firebaseService';
 
+// Khai báo kiểu dữ liệu cho window.aistudio để tránh lỗi TypeScript
+// Fix: Use the named interface AIStudio to avoid conflict with existing global declarations and resolve "Subsequent property declarations must have the same type" error.
+declare global {
+  interface AIStudio {
+    hasSelectedApiKey: () => Promise<boolean>;
+    openSelectKey: () => Promise<void>;
+  }
+  interface Window {
+    aistudio: AIStudio;
+  }
+}
+
 // --- IndexedDB Helper for Local Caching ---
 const DB_NAME = 'outfit_logger_db';
 const STORE_NAME = 'settings';
@@ -241,7 +253,7 @@ export const MixMatchScreen: React.FC = () => {
     const handleOpenKeyDialog = async () => {
         if (typeof window.aistudio?.openSelectKey === 'function') {
             await window.aistudio.openSelectKey();
-            setHasProKey(true); // Assume success per guidelines
+            setHasProKey(true); // Giả định thành công sau khi mở dialog
         }
     };
 

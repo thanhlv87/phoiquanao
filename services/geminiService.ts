@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { AiTags } from '../types';
 
@@ -61,10 +62,10 @@ export const generateTagsFromImage = async (base64Image: string): Promise<AiTags
 
     const jsonText = response.text.trim();
     const parsedJson = JSON.parse(jsonText);
-
+    
     // Basic validation
     if (parsedJson && Array.isArray(parsedJson.tops) && Array.isArray(parsedJson.bottoms) && Array.isArray(parsedJson.general)) {
-      return parsedJson as AiTags;
+       return parsedJson as AiTags;
     } else {
       throw new Error("Invalid JSON structure from Gemini");
     }
@@ -81,144 +82,62 @@ export const generateTagsFromImage = async (base64Image: string): Promise<AiTags
 };
 
 export const generateOutfitSuggestion = async (tags: string[]): Promise<string> => {
-  if (!process.env.API_KEY) {
-    return "Hãy thử một phong cách cổ điển: áo phông trắng, quần jeans xanh và đôi giày sneaker yêu thích của bạn. Đơn giản, thoải mái và luôn hợp thời trang!";
-  }
-
-  const prompt = `Dựa trên hồ sơ phong cách cá nhân của người dùng, hãy gợi ý một bộ trang phục hoàn chỉnh để họ mặc hôm nay. Các thẻ phong cách thường xuyên nhất của người dùng là: ${tags.join(', ')}. Giữ gợi ý ngắn gọn (2-3 câu), thân thiện và truyền cảm hứng. Không sử dụng markdown.`;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
-    return response.text.trim();
-  } catch (error) {
-    console.error("Error calling Gemini API for outfit suggestion:", error);
-    return "Hiện tại không thể tạo gợi ý. Tại sao không thử bộ trang phục thường ngày yêu thích của bạn?";
-  }
-};
-
-export const generateYearInReviewSummary = async (outfits: any[], year: number, stats: any): Promise<string> => {
-  if (!process.env.API_KEY) {
-    return `Năm ${year}, bạn đã có ${stats.totalOutfits} outfit được ghi lại! Phong cách của bạn thật đa dạng và thú vị. Những món đồ yêu thích như ${stats.favoriteItems[0]?.item || 'các trang phục'} đã đồng hành cùng bạn qua nhiều khoảnh khắc. Hãy tiếp tục khám phá và thể hiện bản thân qua thời trang trong năm mới nhé!`;
-  }
-
-  // Prepare data for AI
-  const topItems = stats.favoriteItems.slice(0, 5).map((i: any) => i.item).join(', ');
-  const mostWorn = stats.mostWornOutfit ?
-    `${stats.mostWornOutfit.tops.join(', ')} + ${stats.mostWornOutfit.bottoms.join(', ')} (${stats.mostWornOutfit.count} lần)`
-    : 'N/A';
-
-  const allTags = outfits.flatMap(o => [...o.tops, ...o.bottoms, ...o.tags]);
-  const tagCounts: Record<string, number> = {};
-  allTags.forEach(tag => {
-    tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-  });
-  const topTags = Object.entries(tagCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 10)
-    .map(([tag]) => tag)
-    .join(', ');
-
-  const prompt = `Bạn là một chuyên gia thời trang và phong cách sống. Hãy tạo một bản tổng kết cuối năm ${year} thú vị và ý nghĩa cho người dùng dựa trên dữ liệu trang phục của họ.
-
-THÔNG TIN:
-- Tổng số outfit: ${stats.totalOutfits}
-- Số ngày ghi chép: ${stats.totalDaysRecorded}
-- Tháng năng suất nhất: ${stats.mostProductiveMonth}
-- Outfit được mặc nhiều nhất: ${mostWorn}
-- Top 5 món đồ yêu thích: ${topItems}
-- Các thẻ phong cách phổ biến: ${topTags}
-- Số outfit độc đáo: ${stats.uniqueOutfits}
-- Chuỗi ghi chép dài nhất: ${stats.recordingStreak} ngày
-
-YÊU CẦU:
-1. Viết 3-4 đoạn văn ngắn (khoảng 200-250 từ tổng)
-2. Phân tích phong cách cá nhân của người dùng
-3. Nhận xét về sự thay đổi/phát triển trong năm (nếu có dữ liệu đủ)
-4. Khen ngợi những điểm tích cực
-5. Đưa ra 2-3 gợi ý thú vị cho năm sau
-6. Giọng văn thân thiện, truyền cảm hứng, tích cực
-7. KHÔNG sử dụng markdown, emoji
-8. Viết bằng tiếng Việt
-
-Hãy tạo một bản tổng kết ấm áp, cá nhân hóa và đầy cảm hứng!`;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
-    return response.text.trim();
-  } catch (error) {
-    console.error("Error calling Gemini API for year in review:", error);
-    return `Năm ${year} thật tuyệt vời với ${stats.totalOutfits} outfit được ghi lại! Phong cách của bạn đa dạng và độc đáo. Những món đồ yêu thích như ${topItems} đã đồng hành cùng bạn qua nhiều khoảnh khắc đáng nhớ. Năm mới, hãy tiếp tục thể hiện cá tính của mình qua thời trang nhé!`;
-  }
-};
-
-export const generateCoordinatedImage = async (modelBase64: string, topBase64: string, bottomBase64: string): Promise<string> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API_KEY not set");
-  }
-
-  // Remove the data URL prefix to get pure base64
-  const modelData = modelBase64.split(',')[1];
-  const topData = topBase64.split(',')[1];
-  const bottomData = bottomBase64.split(',')[1];
-
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-exp", // Using the image-capable model
-      contents: {
-        parts: [
-          // Image 1: Model (person)
-          { inlineData: { mimeType: 'image/jpeg', data: modelData } },
-          // Image 2: Top (shirt/blouse/jacket)
-          { inlineData: { mimeType: 'image/jpeg', data: topData } },
-          // Image 3: Bottom (pants/skirt)
-          { inlineData: { mimeType: 'image/jpeg', data: bottomData } },
-          // Prompt
-          {
-            text: `You are an expert fashion stylist and image compositor.
-
-Task: Create a photorealistic image of the person in the first image wearing the clothes from the second and third images.
-
-Inputs:
-1. Image of a person (the model).
-2. Image of a top (shirt/blouse/jacket).
-3. Image of a bottom (pants/skirt).
-
-Requirements:
-- Retain the pose, body shape, and background of the person in the first image.
-- Naturally fit the top from image 2 onto the person's torso.
-- Naturally fit the bottom from image 3 onto the person's legs.
-- Ensure lighting and shadows are consistent with the original photo.
-- High quality, photorealistic output.
-
-Return the composed image.` },
-        ],
-      },
-    });
-
-    // Search for the generated image in the response
-    const candidates = response.response?.candidates;
-    if (candidates && candidates.length > 0) {
-      const parts = candidates[0]?.content?.parts;
-      if (parts) {
-        // Find the part containing the generated image
-        const imagePart = parts.find(p => p.inlineData);
-        if (imagePart?.inlineData?.data) {
-          const mimeType = imagePart.inlineData.mimeType || 'image/png';
-          return `data:${mimeType};base64,${imagePart.inlineData.data}`;
-        }
-      }
+    if (!process.env.API_KEY) {
+        return "Hãy thử một phong cách cổ điển: áo phông trắng, quần jeans xanh và đôi giày sneaker yêu thích của bạn. Đơn giản, thoải mái và luôn hợp thời trang!";
     }
 
-    // If no image is returned, throw an error
-    throw new Error("No image generated from AI model");
-  } catch (error) {
-    console.error("Error calling Gemini for virtual try-on:", error);
-    throw error;
-  }
+    const prompt = `Dựa trên hồ sơ phong cách cá nhân của người dùng, hãy gợi ý một bộ trang phục hoàn chỉnh để họ mặc hôm nay. Các thẻ phong cách thường xuyên nhất của người dùng là: ${tags.join(', ')}. Giữ gợi ý ngắn gọn (2-3 câu), thân thiện và truyền cảm hứng. Không sử dụng markdown.`;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+        });
+        return response.text.trim();
+    } catch (error) {
+        console.error("Error calling Gemini API for outfit suggestion:", error);
+        return "Hiện tại không thể tạo gợi ý. Tại sao không thử bộ trang phục thường ngày yêu thích của bạn?";
+    }
+};
+
+export const generateMixImage = async (modelBase64: string, topBase64: string, bottomBase64: string): Promise<string> => {
+    if (!process.env.API_KEY) {
+        throw new Error("API Key is missing");
+    }
+
+    const modelData = modelBase64.split(',')[1];
+    const topData = topBase64.split(',')[1];
+    const bottomData = bottomBase64.split(',')[1];
+
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image', 
+            contents: {
+                parts: [
+                    { inlineData: { mimeType: 'image/jpeg', data: modelData } },
+                    { inlineData: { mimeType: 'image/jpeg', data: topData } },
+                    { inlineData: { mimeType: 'image/jpeg', data: bottomData } },
+                    { text: 'Hãy tạo ra một hình ảnh photorealistic (chân thực): Ghép chiếc áo từ hình 2 và chiếc quần/váy từ hình 3 lên người mẫu ở hình 1. Giữ nguyên tư thế, khuôn mặt và bối cảnh của người mẫu. Ánh sáng và đổ bóng phải tự nhiên để trông như người mẫu đang thực sự mặc bộ đồ đó. Chỉ trả về 1 hình ảnh kết quả duy nhất.' },
+                ],
+            },
+        });
+
+        // Tìm phần hình ảnh trong câu trả lời (đôi khi model trả lời text trước)
+        for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData) {
+                return `data:image/png;base64,${part.inlineData.data}`;
+            }
+        }
+        
+        // Nếu không tìm thấy ảnh, kiểm tra xem có text báo lỗi hay từ chối không
+        const textPart = response.candidates[0].content.parts.find(p => p.text);
+        if (textPart) {
+            console.warn("Model response text:", textPart.text);
+        }
+
+        throw new Error("No image generated by Gemini");
+    } catch (error) {
+        console.error("Error generating mix image:", error);
+        throw error;
+    }
 };

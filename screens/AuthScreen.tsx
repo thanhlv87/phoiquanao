@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -12,12 +13,12 @@ export const AuthScreen: React.FC = () => {
     const [loading, setLoading] = useState(false);
     
     const navigate = useNavigate();
-    const { loginWithGoogle, signInWithEmail, signUpWithEmail, user, error: authError, clearError } = useAuth();
+    const { loginWithGoogle, signInWithEmail, signUpWithEmail, loginAnonymously, user, error: authError, clearError } = useAuth();
 
     useEffect(() => {
         // If the user is already logged in (and not an anonymous user), redirect to home.
         // This handles the case after a successful Google sign-in redirect.
-        if (user && !user.isAnonymous) {
+        if (user) {
             navigate('/');
         }
     }, [user, navigate]);
@@ -55,9 +56,13 @@ export const AuthScreen: React.FC = () => {
         handleAuthAction(loginWithGoogle);
     };
 
+    const handleGuestLogin = () => {
+        handleAuthAction(loginAnonymously);
+    };
+
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-slate-100 p-4">
-            <div className="w-full max-w-md bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl p-8">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-100 p-4">
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
                 <div className="text-center mb-8">
                     <img src="https://cdn-icons-png.flaticon.com/512/3050/3050253.png" alt="App Logo" className="w-16 h-16 mx-auto mb-4" />
                     <h1 className="text-3xl font-bold text-gray-800">Chào mừng</h1>
@@ -67,13 +72,13 @@ export const AuthScreen: React.FC = () => {
                 <div className="flex border-b border-gray-200 mb-6">
                     <button
                         onClick={() => setMode('login')}
-                        className={`w-1/2 py-3 text-sm font-semibold transition-colors ${mode === 'login' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500'}`}
+                        className={`w-1/2 py-3 text-sm font-semibold transition-colors ${mode === 'login' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
                     >
                         Đăng nhập
                     </button>
                     <button
                         onClick={() => setMode('signup')}
-                        className={`w-1/2 py-3 text-sm font-semibold transition-colors ${mode === 'signup' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500'}`}
+                        className={`w-1/2 py-3 text-sm font-semibold transition-colors ${mode === 'signup' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
                     >
                         Đăng ký
                     </button>
@@ -90,7 +95,7 @@ export const AuthScreen: React.FC = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                            className="w-full pl-10 pr-3 py-3 bg-gray-100 text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className="w-full pl-10 pr-3 py-3 bg-gray-100 text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
                     <div className="relative">
@@ -101,13 +106,13 @@ export const AuthScreen: React.FC = () => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                            className="w-full pl-10 pr-3 py-3 bg-gray-100 text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className="w-full pl-10 pr-3 py-3 bg-gray-100 text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-glow-lg transition-all duration-300 disabled:opacity-50 flex items-center justify-center transform hover:scale-105"
+                        className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-blue-700 transition-colors disabled:bg-blue-300 flex items-center justify-center"
                     >
                         {loading ? <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div> : (mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản')}
                     </button>
@@ -125,13 +130,17 @@ export const AuthScreen: React.FC = () => {
                 <button
                     onClick={handleGoogleSignIn}
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 bg-white/80 backdrop-blur-xl text-gray-700 font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl hover:bg-white transition-all duration-300 border border-gray-200 disabled:opacity-50 transform hover:scale-105"
+                    className="w-full flex items-center justify-center gap-2 bg-white text-gray-700 font-semibold py-3 px-4 rounded-lg shadow-md hover:bg-gray-100 transition-colors border border-gray-200 disabled:opacity-50"
                 >
                     <Icon name="google" className="w-5 h-5" />
                     <span>Đăng nhập với Google</span>
                 </button>
             </div>
-             <button onClick={() => navigate('/')} className="mt-8 text-sm text-gray-600 hover:text-purple-600 transition-colors">
+             <button 
+                onClick={handleGuestLogin} 
+                disabled={loading}
+                className="mt-8 text-sm text-gray-600 hover:text-blue-600 disabled:opacity-50"
+             >
                 Tiếp tục với tư cách khách
             </button>
         </div>

@@ -9,17 +9,6 @@ import { generateOutfitSuggestion } from '../services/geminiService';
 import { Icon } from '../components/Icon';
 import { Outfit } from '../types';
 
-const getGreeting = () => {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) {
-    return 'Chào buổi sáng';
-  } else if (hour >= 12 && hour < 18) {
-    return 'Chào buổi chiều';
-  } else {
-    return 'Chào buổi tối';
-  }
-};
-
 const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => void }> = ({ outfits, onNavigate }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -43,12 +32,12 @@ const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => 
     if (outfits.length === 1) {
       const outfit = outfits[0];
        return (
-        <div onClick={() => onNavigate(outfit.id)} className="bg-white rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-glow-lg cursor-pointer">
+        <div onClick={() => onNavigate(outfit.id)} className="bg-white rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105 cursor-pointer">
           <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full aspect-square object-cover" />
           <div className="p-4">
             <div className="flex flex-wrap gap-2">
               {[...outfit.tops, ...outfit.bottoms, ...outfit.tags].slice(0, 4).map(tag => (
-                <span key={tag} className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">{tag}</span>
+                <span key={tag} className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">{tag}</span>
               ))}
             </div>
           </div>
@@ -60,12 +49,12 @@ const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => 
         <div className="relative">
             <div ref={scrollContainerRef} onScroll={handleScroll} className="flex space-x-4 overflow-x-auto snap-x snap-mandatory pb-2 scrollbar-hide">
                 {outfits.map((outfit) => (
-                    <div key={outfit.id} onClick={() => onNavigate(outfit.id)} className="snap-start flex-shrink-0 w-[80%] md:w-[45%] bg-white rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-glow-lg cursor-pointer">
+                    <div key={outfit.id} onClick={() => onNavigate(outfit.id)} className="snap-start flex-shrink-0 w-[80%] md:w-[45%] bg-white rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105 cursor-pointer">
                         <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full aspect-square object-cover" />
                         <div className="p-3">
                             <div className="flex flex-wrap gap-1">
                                 {[...outfit.tops, ...outfit.bottoms].slice(0, 3).map(tag => (
-                                    <span key={tag} className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 text-xs font-semibold px-2 py-0.5 rounded-full">{tag}</span>
+                                    <span key={tag} className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full">{tag}</span>
                                 ))}
                             </div>
                         </div>
@@ -73,13 +62,13 @@ const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => 
                 ))}
             </div>
             {showLeftArrow && (
-                <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-xl rounded-full p-2 shadow-lg z-10 hover:bg-white transition-all duration-300 hover:scale-110">
-                    <Icon name="chevron-left" className="w-6 h-6 text-purple-600" />
+                <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 shadow-md z-10 hover:bg-white">
+                    <Icon name="chevron-left" className="w-6 h-6 text-gray-700" />
                 </button>
             )}
             {showRightArrow && (
-                <button onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-xl rounded-full p-2 shadow-lg z-10 hover:bg-white transition-all duration-300 hover:scale-110">
-                    <Icon name="chevron-right" className="w-6 h-6 text-purple-600" />
+                <button onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 shadow-md z-10 hover:bg-white">
+                    <Icon name="chevron-right" className="w-6 h-6 text-gray-700" />
                 </button>
             )}
         </div>
@@ -87,14 +76,14 @@ const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => 
 };
 
 const AddOutfitPrompt: React.FC<{ onAdd: () => void }> = ({ onAdd }) => (
-  <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 text-center flex flex-col items-center justify-center min-h-[200px] border-2 border-dashed border-purple-200">
-    <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 flex items-center justify-center mb-4">
-      <Icon name="plus" className="w-8 h-8 text-purple-500" />
+  <div className="bg-white rounded-xl shadow-md p-6 text-center flex flex-col items-center justify-center min-h-[200px] border-2 border-dashed border-gray-300">
+    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+      <Icon name="plus" className="w-8 h-8 text-gray-400" />
     </div>
-    <p className="text-gray-600 mb-4">Bạn chưa ghi lại trang phục cho hôm nay.</p>
+    <p className="text-gray-500 mb-4">Bạn chưa ghi lại trang phục cho hôm nay.</p>
     <button
       onClick={onAdd}
-      className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-glow-lg transition-all duration-300 transform hover:scale-105"
+      className="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300"
     >
       Thêm trang phục hôm nay
     </button>
@@ -104,12 +93,12 @@ const AddOutfitPrompt: React.FC<{ onAdd: () => void }> = ({ onAdd }) => (
 const SignUpPrompt: React.FC = () => {
     const navigate = useNavigate();
     return (
-        <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 text-center mt-8 border-2 border-dashed border-purple-200">
+        <div className="bg-white rounded-xl shadow-md p-6 text-center mt-8 border-2 border-dashed border-blue-300">
             <h3 className="text-lg font-semibold text-gray-800 mb-2">Lưu lại phong cách của bạn</h3>
             <p className="text-gray-600 mb-4">Tạo tài khoản để lưu các bộ trang phục và truy cập chúng từ bất kỳ thiết bị nào.</p>
             <button
                 onClick={() => navigate('/auth')}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-glow-lg transition-all duration-300 transform hover:scale-105"
+                className="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300"
             >
                 Đăng ký hoặc Đăng nhập
             </button>
@@ -120,7 +109,7 @@ const SignUpPrompt: React.FC = () => {
 
 const LoadingSpinner: React.FC = () => (
   <div className="flex justify-center items-center p-8">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
   </div>
 );
 
@@ -136,7 +125,7 @@ const FlashbackSection: React.FC<{
       {outfits.length > 0 ? (
         <OutfitCarousel outfits={outfits} onNavigate={onNavigate} />
       ) : (
-        <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-md p-4 text-center text-sm text-gray-500 border border-dashed border-purple-200">
+        <div className="bg-white/70 rounded-xl shadow-md p-4 text-center text-sm text-gray-500 border border-dashed">
           <p>{fallbackMessage}</p>
         </div>
       )}
@@ -173,7 +162,7 @@ const StyleSuggestion: React.FC = () => {
 
   if (!hasEnoughOutfits) {
     return (
-        <div className="bg-white/70 backdrop-blur-xl rounded-2xl shadow-md p-4 text-center text-sm text-gray-500 mt-8 border border-dashed border-purple-200">
+        <div className="bg-white/70 rounded-xl shadow-md p-4 text-center text-sm text-gray-500 mt-8 border border-dashed">
             Ghi lại ít nhất 3 bộ trang phục để mở khóa gợi ý phong cách cá nhân từ AI!
         </div>
     );
@@ -182,22 +171,22 @@ const StyleSuggestion: React.FC = () => {
   return (
     <div className="mt-8">
       <h2 className="text-xl font-semibold text-gray-700 mb-3">Cần thêm cảm hứng?</h2>
-      <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl p-6 border-2 border-dashed border-transparent">
+      <div className="bg-white rounded-xl shadow-md p-6 border-2 border-dashed border-transparent">
         {suggestion && !isLoading && (
           <p className="text-gray-700 text-center italic">"{suggestion}"</p>
         )}
         {isLoading && (
           <div className="flex justify-center items-center">
-             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
         )}
         {error && <p className="text-red-500 text-center">{error}</p>}
-
+        
         <div className="text-center mt-4">
             <button
               onClick={handleGetSuggestion}
               disabled={isLoading}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-glow-lg transition-all duration-300 disabled:opacity-50 flex items-center gap-2 mx-auto transform hover:scale-105"
+              className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-2 px-5 rounded-lg shadow-md hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 disabled:opacity-50 flex items-center gap-2 mx-auto"
             >
               <Icon name="sparkles" className="w-5 h-5" />
               <span>{suggestion ? 'Nhận ý tưởng khác' : 'Nhận gợi ý phong cách'}</span>
@@ -269,25 +258,41 @@ export const HomeScreen: React.FC = () => {
   };
 
   const greetingName = user && !user.isAnonymous ? (user.displayName?.split(' ')[0] || user.email) : '';
-  const greeting = getGreeting();
+
+  // Tính toán lời chào dựa trên giờ hiện tại
+  const timeBasedGreeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return "Chào buổi sáng";
+    if (hour >= 12 && hour < 18) return "Chào buổi chiều";
+    return "Chào buổi tối";
+  }, []);
 
   return (
     <div className="p-4 md:p-6 pb-20">
       <header className="mb-6">
         <div className="flex justify-between items-start">
             <div>
-                <h1 className="text-3xl font-bold text-gray-800">{greeting}{greetingName ? `, ${greetingName}` : ''}</h1>
+                <h1 className="text-3xl font-bold text-gray-800">{timeBasedGreeting}{greetingName ? `, ${greetingName}` : ''}</h1>
                 <p className="text-gray-500">Hôm nay bạn mặc gì?</p>
             </div>
-            {user && !user.isAnonymous && (
-                 <button
-                    onClick={logout}
-                    className="flex items-center gap-2 text-gray-600 font-semibold p-2 rounded-full hover:bg-red-100 hover:text-red-600 transition-colors"
-                    title="Đăng xuất"
-                 >
-                    <Icon name="logout" className="w-6 h-6" />
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={() => navigate('/search')}
+                    className="flex items-center gap-2 text-gray-600 font-semibold p-2 rounded-full hover:bg-gray-100 transition-colors"
+                    title="Tìm kiếm"
+                >
+                    <Icon name="search" className="w-6 h-6" />
                 </button>
-            )}
+                {user && !user.isAnonymous && (
+                    <button
+                        onClick={logout}
+                        className="flex items-center gap-2 text-gray-600 font-semibold p-2 rounded-full hover:bg-red-100 hover:text-red-600 transition-colors"
+                        title="Đăng xuất"
+                    >
+                        <Icon name="logout" className="w-6 h-6" />
+                    </button>
+                )}
+            </div>
         </div>
       </header>
       <main>

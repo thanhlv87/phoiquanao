@@ -5,15 +5,15 @@ import { getFirestore } from "@firebase/firestore";
 import { getAuth } from "@firebase/auth";
 import { getStorage } from "@firebase/storage";
 
-// IMPORTANT: Firebase configuration using environment variables
-// Set these in Vercel dashboard or .env.local for local development
+// IMPORTANT: Replace this with your app's Firebase project configuration.
+// You can find this in your Firebase project settings.
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyD4Qpa7UV_4DB-C-SVbG8Ulze5Xpxvg-pg",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "phoiquanao.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "phoiquanao",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "phoiquanao.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "745091328901",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:745091328901:web:557b8bb09aa74ec17b72ec"
+  apiKey: "AIzaSyD4Qpa7UV_4DB-C-SVbG8Ulze5Xpxvg-pg",
+  authDomain: "phoiquanao.firebaseapp.com",
+  projectId: "phoiquanao",
+  storageBucket: "phoiquanao.firebasestorage.app",
+  messagingSenderId: "745091328901",
+  appId: "1:745091328901:web:557b8bb09aa74ec17b72ec"
 };
 
 // Initialize Firebase

@@ -1,8 +1,8 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 // Fix: Updated Firebase imports to use scoped packages to resolve module export errors.
 import {
   onAuthStateChanged,
-  signInAnonymously,
   signOut,
   GoogleAuthProvider,
   signInWithRedirect,
@@ -10,8 +10,10 @@ import {
   getRedirectResult,
   User,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   EmailAuthProvider,
-  linkWithCredential
+  linkWithCredential,
+  signInAnonymously
 } from '@firebase/auth';
 // Fix: Import FirebaseError from 'firebase/app' instead of 'firebase/auth' as it is not exported from the latter in Firebase v9.
 // Fix: Updated Firebase import to use scoped package to resolve module export error.
@@ -25,6 +27,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
+  loginAnonymously: () => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
 }
@@ -46,6 +49,10 @@ const getFriendlyErrorMessage = (errorCode: string) => {
         case 'auth/cancelled-popup-request':
         case 'auth/popup-closed-by-user':
             return 'Cửa sổ đăng nhập đã bị đóng. Vui lòng thử lại.';
+        case 'auth/admin-restricted-operation':
+            return 'Tính năng đăng nhập khách chưa được kích hoạt trên hệ thống.';
+        case 'auth/operation-not-allowed':
+             return 'Phương thức đăng nhập này chưa được kích hoạt.';
         default:
             return 'Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.';
     }
@@ -65,11 +72,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-      } else {
-        signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed:", error));
-      }
+      setUser(currentUser);
       setLoading(false);
     });
 
@@ -103,13 +106,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
         const currentUser = auth.currentUser;
         if (currentUser && currentUser.isAnonymous) {
+            // Upgrade anonymous account
             const credential = EmailAuthProvider.credential(email, password);
             await linkWithCredential(currentUser, credential);
         } else {
-            const err = new Error("Please sign up from a fresh session.");
-            console.error("No anonymous user to link.");
-            setError("Không thể tạo tài khoản. Vui lòng làm mới và thử lại.");
-            throw err;
+            // Standard sign up
+            await createUserWithEmailAndPassword(auth, email, password);
         }
     } catch (err) {
         if (err instanceof FirebaseError) {
@@ -131,12 +133,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const loginAnonymously = async () => {
+    setError(null);
+    try {
+        await signInAnonymously(auth);
+    } catch (err) {
+        console.error("Error signing in anonymously:", err);
+        if (err instanceof FirebaseError) {
+            setError(getFriendlyErrorMessage(err.code));
+        } else {
+             setError('Không thể đăng nhập khách.');
+        }
+        throw err;
+    }
+  };
 
   const logout = async () => {
     try {
       await signOut(auth);
-      // After signing out, sign in anonymously again to maintain a session for logged-out users
-      await signInAnonymously(auth);
     } catch (error) {
       console.error("Sign out error", error);
     }
@@ -144,7 +158,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const clearError = () => setError(null);
 
-  const value = { user, loading, loginWithGoogle, signUpWithEmail, signInWithEmail, logout, error, clearError };
+  const value = { user, loading, loginWithGoogle, signUpWithEmail, signInWithEmail, loginAnonymously, logout, error, clearError };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
 };

@@ -22,12 +22,11 @@ export interface Collection {
   description: string;
 }
 
-export interface ModelCoordinate {
+export interface MixResult {
   id: string;
-  userId: string;
+  createdAt: string;
   modelImageUrl: string;
   topImageUrl: string;
   bottomImageUrl: string;
   resultImageUrl: string;
-  createdAt: string;
 }

@@ -1,7 +1,7 @@
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOutfits } from '../hooks/useOutfits';
-import { useCollections } from '../hooks/useCollections';
 import { useTagSuggestions } from '../hooks/useTagSuggestions';
 import { fileToBase64 } from '../utils/imageUtils';
 import { generateTagsFromImage } from '../services/geminiService';
@@ -9,6 +9,38 @@ import { parseDateString, formatDate } from '../utils/dateUtils';
 import { Icon } from '../components/Icon';
 import { AiTags, Outfit } from '../types';
 import { compressImage } from '../utils/imageCompression';
+
+// --- Modal Component ---
+const DeleteConfirmModal: React.FC<{ 
+    onClose: () => void; 
+    onConfirm: () => void;
+}> = ({ onClose, onConfirm }) => {
+    return (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+            <div className="bg-white rounded-[2.5rem] w-full max-w-xs p-8 shadow-2xl animate-scale-up" onClick={e => e.stopPropagation()}>
+                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Icon name="trash" className="w-10 h-10 text-red-500" />
+                </div>
+                <h3 className="text-xl font-black text-slate-800 text-center mb-2 uppercase tracking-tight">Xóa nhật ký này?</h3>
+                <p className="text-slate-500 text-sm text-center mb-8 font-medium">Bản ghi trang phục ngày này sẽ bị xóa vĩnh viễn.</p>
+                <div className="flex flex-col gap-3">
+                    <button 
+                        onClick={onConfirm}
+                        className="w-full bg-red-500 text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-all"
+                    >
+                        XÓA NGAY
+                    </button>
+                    <button 
+                        onClick={onClose}
+                        className="w-full bg-slate-100 text-slate-500 font-black py-4 rounded-2xl active:scale-95 transition-all"
+                    >
+                        BỎ QUA
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // A reusable component for handling tag inputs
 const TagInputSection: React.FC<{
@@ -42,9 +74,9 @@ const TagInputSection: React.FC<{
       <h3 className="text-lg font-semibold text-gray-700 mb-2">{title}</h3>
       <div className="flex flex-wrap gap-2 mb-3">
         {tags.map(tag => (
-          <div key={tag} className="flex items-center bg-blue-100 text-blue-800 text-sm font-medium pl-3 pr-2 py-1 rounded-full">
+          <div key={tag} className="flex items-center bg-indigo-100 text-indigo-800 text-sm font-medium pl-3 pr-2 py-1 rounded-full">
             <span>{tag}</span>
-            <button onClick={() => onRemoveTag(tag)} className="ml-2 text-blue-500 hover:text-blue-700">
+            <button onClick={() => onRemoveTag(tag)} className="ml-2 text-indigo-500 hover:text-indigo-700">
               &times;
             </button>
           </div>
@@ -57,16 +89,16 @@ const TagInputSection: React.FC<{
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={`Thêm thẻ ${title.toLowerCase()}...`}
-          className="w-full pl-3 pr-16 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full pl-3 pr-16 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
-        <button onClick={handleAdd} className="absolute right-1 top-1/2 -translate-y-1/2 bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-semibold hover:bg-blue-700">Thêm</button>
+        <button onClick={handleAdd} className="absolute right-1 top-1/2 -translate-y-1/2 bg-indigo-600 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-indigo-700">Thêm</button>
       </div>
       <div className="flex flex-wrap gap-2 mt-2">
         {filteredSuggestions.slice(0, 5).map(suggestion => (
           <button
             key={suggestion}
             onClick={() => onSuggestionClick(suggestion)}
-            className="bg-gray-200 text-gray-700 text-xs font-semibold px-2.5 py-1 rounded-full hover:bg-gray-300"
+            className="bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full hover:bg-slate-200"
           >
             + {suggestion}
           </button>
@@ -75,40 +107,6 @@ const TagInputSection: React.FC<{
     </div>
   );
 };
-
-const CollectionsSection: React.FC<{
-    selectedIds: string[];
-    onToggleId: (id: string) => void;
-}> = ({ selectedIds, onToggleId }) => {
-    const { state } = useCollections();
-    const collections = useMemo(() => Object.values(state.collections), [state.collections]);
-
-    if (state.loading) return <p>Đang tải bộ sưu tập...</p>;
-    if (collections.length === 0) {
-        return <p className="text-sm text-gray-500 text-center">Bạn chưa có bộ sưu tập nào.</p>
-    }
-
-    return (
-        <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">Bộ sưu tập</h3>
-            <div className="flex flex-wrap gap-2">
-                {collections.map(collection => {
-                    const isSelected = selectedIds.includes(collection.id);
-                    return (
-                        <button
-                            key={collection.id}
-                            onClick={() => onToggleId(collection.id)}
-                            className={`text-sm font-semibold px-4 py-2 rounded-full transition-colors ${isSelected ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                        >
-                           {collection.name}
-                        </button>
-                    )
-                })}
-            </div>
-        </div>
-    )
-}
-
 
 export const AddOutfitScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -123,12 +121,14 @@ export const AddOutfitScreen: React.FC = () => {
   const [tops, setTops] = useState<string[]>([]);
   const [bottoms, setBottoms] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
-  const [collectionIds, setCollectionIds] = useState<string[]>([]);
   
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // State for Modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const isEditMode = !!outfitId;
   const existingOutfit = useMemo(() => {
@@ -148,7 +148,6 @@ export const AddOutfitScreen: React.FC = () => {
       setTops(existingOutfit.tops);
       setBottoms(existingOutfit.bottoms);
       setTags(existingOutfit.tags);
-      setCollectionIds(existingOutfit.collectionIds || []);
     }
   }, [existingOutfit, isEditMode]);
 
@@ -158,17 +157,15 @@ export const AddOutfitScreen: React.FC = () => {
       setError(null);
       try {
         const compressedFiles = await Promise.all(
-          // Fix: Explicitly type 'file' as 'File' to prevent type inference issues.
           files.map((file: File) => compressImage(file, { maxWidth: 1080, quality: 0.7 }))
         );
         setNewImageFiles(prev => [...prev, ...compressedFiles]);
       } catch (err) {
         console.error("Failed to compress images:", err);
-        setError("Không thể xử lý hình ảnh. Vui lòng thử lại.");
+        setError("Không thể xử lý hình ảnh.");
       }
     }
   };
-
 
   const removeImage = (index: number, type: 'existing' | 'new') => {
     if (type === 'existing') {
@@ -181,13 +178,12 @@ export const AddOutfitScreen: React.FC = () => {
   const handleGenerateTags = async () => {
     const firstImage = images[0] || (newImageFiles[0] ? URL.createObjectURL(newImageFiles[0]) : null);
     if (!firstImage) {
-      setError("Vui lòng chọn một hình ảnh trước.");
+      setError("Vui lòng chọn hình ảnh trước.");
       return;
     }
 
     let base64Image = firstImage;
     if (newImageFiles[0]) {
-        // We still need base64 for Gemini AI analysis
       base64Image = await fileToBase64(newImageFiles[0]);
     }
     
@@ -205,7 +201,7 @@ export const AddOutfitScreen: React.FC = () => {
 
     } catch (error) {
       console.error("Error generating tags:", error);
-      setError("Không thể tạo thẻ AI. Vui lòng thử lại.");
+      setError("AI đang bận. Vui lòng thử lại.");
     } finally {
       setIsGenerating(false);
     }
@@ -215,30 +211,22 @@ export const AddOutfitScreen: React.FC = () => {
     const dateId = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     
     if (images.length === 0 && newImageFiles.length === 0) {
-      setError("Vui lòng thêm ít nhất một hình ảnh.");
+      setError("Vui lòng thêm hình ảnh.");
       return;
-    }
-    if (tops.length === 0 && bottoms.length === 0) {
-        setError("Vui lòng thêm ít nhất một thẻ cho áo hoặc quần.");
-        return;
     }
 
     setIsSaving(true);
     setError(null);
 
-    // Note: We now pass the file objects directly to the service for R2 upload.
-    // The service handles uploading and getting the URL.
-
     const outfitData = {
       id,
       date: new Date().toISOString(),
       dateId,
-      newImageFiles, // Changed from newImageBase64s
+      newImageFiles,
       existingImageUrls: images,
       tops,
       bottoms,
       tags,
-      collectionIds,
     };
 
     try {
@@ -249,25 +237,31 @@ export const AddOutfitScreen: React.FC = () => {
       navigate('/');
     } catch (error) {
       console.error("Error saving outfit:", error);
-      setError("Không thể lưu trang phục. Vui lòng thử lại.");
+      setError("Không thể lưu. Vui lòng thử lại.");
       setIsSaving(false);
     }
   };
   
-  const handleDelete = async () => {
+  // Trigger modal display
+  const handleDeleteClick = () => {
+    if (!isEditMode || !existingOutfit) return;
+    setShowDeleteModal(true);
+  };
+
+  // Perform actual delete logic
+  const confirmDelete = async () => {
     if (!isEditMode || !existingOutfit) return;
     
-    if (window.confirm("Bạn có chắc chắn muốn xóa trang phục này?")) {
-        setIsDeleting(true);
-        setError(null);
-        try {
-            await deleteOutfit(existingOutfit);
-            navigate('/');
-        } catch (error) {
-            console.error("Error deleting outfit:", error);
-            setError("Không thể xóa trang phục. Vui lòng thử lại.");
-            setIsDeleting(false);
-        }
+    setIsDeleting(true);
+    setError(null);
+    try {
+        await deleteOutfit(existingOutfit);
+        navigate('/');
+    } catch (error) {
+        console.error("Error deleting outfit:", error);
+        setError("Lỗi khi xóa.");
+        setIsDeleting(false);
+        setShowDeleteModal(false);
     }
   };
 
@@ -278,57 +272,40 @@ export const AddOutfitScreen: React.FC = () => {
   const removeTagCallback = useCallback((setter: React.Dispatch<React.SetStateAction<string[]>>, tagToRemove: string) => {
     setter(prev => prev.filter(tag => tag !== tagToRemove));
   }, []);
-  
-  const handleToggleCollectionId = useCallback((idToToggle: string) => {
-    setCollectionIds(prev =>
-        prev.includes(idToToggle)
-            ? prev.filter(id => id !== idToToggle)
-            : [...prev, idToToggle]
-    );
-  }, []);
 
   const allImages = useMemo(() => [
     ...images.map(url => ({ type: 'existing', src: url })),
     ...newImageFiles.map(file => ({ type: 'new', src: URL.createObjectURL(file) }))
   ], [images, newImageFiles]);
 
-
-  if ((isEditMode && state.loading) || (!dateParam && !outfitId)) {
-    return (
-      <div className="p-4 text-center">
-        <p className="text-red-500">Ngày hoặc trang phục không hợp lệ.</p>
-        <button onClick={() => navigate('/')} className="mt-4 text-blue-600">Trở về Trang chủ</button>
-      </div>
-    );
-  }
-
   return (
     <div className="p-4 md:p-6 pb-20 bg-slate-50 min-h-screen">
+      {/* Modal Xóa */}
+      {showDeleteModal && (
+          <DeleteConfirmModal 
+              onClose={() => setShowDeleteModal(false)} 
+              onConfirm={confirmDelete} 
+          />
+      )}
+
       <header className="flex items-center justify-between mb-6">
-        <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-gray-200">
-          <Icon name="back" className="w-6 h-6 text-gray-700" />
+        <button onClick={() => navigate(-1)} className="p-2 rounded-2xl bg-white shadow-sm border border-slate-100 active:scale-90 transition-all">
+          <Icon name="back" className="w-5 h-5 text-slate-700" />
         </button>
-        <h1 className="text-xl font-bold text-gray-800">{formatDate(date)}</h1>
+        <h1 className="text-xl font-black text-slate-800 tracking-tight">{formatDate(date)}</h1>
         <div className="w-10"></div>
       </header>
 
       <main>
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          ref={fileInputRef}
-          onChange={handleImageChange}
-          className="hidden"
-        />
+        <input type="file" accept="image/*" multiple ref={fileInputRef} onChange={handleImageChange} className="hidden" />
 
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="grid grid-cols-3 gap-3 mb-6">
             {allImages.map(({ type, src }, index) => (
                 <div key={src} className="relative group aspect-square">
-                    <img src={src} alt={`Outfit image ${index + 1}`} className="w-full h-full object-cover rounded-lg shadow" />
+                    <img src={src} alt="Outfit" className="w-full h-full object-cover rounded-2xl shadow-sm border border-white" />
                     <button
                         onClick={() => removeImage(type === 'existing' ? images.findIndex(s => s === src) : newImageFiles.findIndex(f => URL.createObjectURL(f) === src), type as 'existing' | 'new')}
-                        className="absolute top-1 right-1 bg-black/50 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-lg"
                     >
                         &times;
                     </button>
@@ -336,41 +313,39 @@ export const AddOutfitScreen: React.FC = () => {
             ))}
              <div
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full aspect-square bg-gray-200 rounded-lg border-2 border-dashed border-gray-400 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors"
+                className="w-full aspect-square bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-200 transition-colors"
             >
-                <Icon name="plus" className="w-8 h-8 text-gray-500" />
-                <p className="text-xs text-gray-500 mt-1">Thêm ảnh</p>
+                <Icon name="plus" className="w-6 h-6 text-slate-400" />
             </div>
         </div>
 
         <button
           onClick={handleGenerateTags}
           disabled={allImages.length === 0 || isGenerating}
-          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-3 px-5 rounded-lg shadow-md hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed mb-6"
+          className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-black py-4 px-5 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-50 mb-8"
         >
           {isGenerating ? (
-            <><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div><span>Đang phân tích...</span></>
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
           ) : (
-            <><Icon name="sparkles" className="w-5 h-5" /><span>Tạo thẻ bằng AI (từ ảnh đầu tiên)</span></>
+            <><Icon name="sparkles" className="w-5 h-5" /><span>AI PHÂN TÍCH TAGS</span></>
           )}
         </button>
         
-        {error && <p className="bg-red-100 text-red-700 text-center p-3 rounded-lg mb-4 text-sm">{error}</p>}
+        {error && <p className="bg-red-50 text-red-500 text-center p-3 rounded-xl mb-6 text-xs font-bold uppercase">{error}</p>}
         
-        <div className="bg-white p-4 rounded-lg shadow-md">
+        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
             <TagInputSection title="Áo" tags={tops} suggestions={suggestions.tops} onAddTag={(tag) => addTagCallback(setTops, tag)} onRemoveTag={(tag) => removeTagCallback(setTops, tag)} onSuggestionClick={(tag) => addTagCallback(setTops, tag)} />
             <TagInputSection title="Quần" tags={bottoms} suggestions={suggestions.bottoms} onAddTag={(tag) => addTagCallback(setBottoms, tag)} onRemoveTag={(tag) => removeTagCallback(setBottoms, tag)} onSuggestionClick={(tag) => addTagCallback(setBottoms, tag)} />
-            <TagInputSection title="Thẻ chung" tags={tags} suggestions={suggestions.tags} onAddTag={(tag) => addTagCallback(setTags, tag)} onRemoveTag={(tag) => removeTagCallback(setTags, tag)} onSuggestionClick={(tag) => addTagCallback(setTags, tag)} />
-            <CollectionsSection selectedIds={collectionIds} onToggleId={handleToggleCollectionId} />
+            <TagInputSection title="Tags chung" tags={tags} suggestions={suggestions.tags} onAddTag={(tag) => addTagCallback(setTags, tag)} onRemoveTag={(tag) => removeTagCallback(setTags, tag)} onSuggestionClick={(tag) => addTagCallback(setTags, tag)} />
         </div>
         
         <div className="mt-8 flex items-center gap-4">
-          <button onClick={handleSave} disabled={isSaving || isDeleting} className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-blue-700 transition-colors disabled:bg-blue-300">
-            {isSaving ? 'Đang lưu...' : (isEditMode ? 'Cập nhật' : 'Lưu trang phục')}
+          <button onClick={handleSave} disabled={isSaving || isDeleting} className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 active:scale-95 transition-all">
+            {isSaving ? 'ĐANG LƯU...' : 'LƯU TRANG PHỤC'}
           </button>
           {isEditMode && (
-            <button onClick={handleDelete} disabled={isSaving || isDeleting} className="bg-red-100 text-red-600 font-bold py-3 px-5 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50">
-              {isDeleting ? 'Đang xóa...' : 'Xóa'}
+            <button onClick={handleDeleteClick} disabled={isSaving || isDeleting} className="bg-slate-100 text-red-500 font-black py-4 px-6 rounded-2xl active:scale-95 transition-all">
+              <Icon name="trash" className="w-5 h-5" />
             </button>
           )}
         </div>

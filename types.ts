@@ -1,13 +1,23 @@
 
 export interface Outfit {
-  id: string; // Firestore unique ID
-  date: string; // ISO string for the exact time
-  dateId: string; // YYYY-MM-DD format for grouping by day
+  id: string;
+  date: string;
+  dateId: string;
   imageUrls: string[];
   tops: string[];
   bottoms: string[];
   tags: string[];
-  collectionIds?: string[]; // IDs of collections this outfit belongs to
+  collectionIds?: string[];
+}
+
+export interface WardrobeItem {
+  id: string;
+  category: 'top' | 'bottom' | 'skirt' | 'dress';
+  imageUrl: string;
+  tags: string[];
+  color?: string;
+  material?: string;
+  createdAt: string;
 }
 
 export interface AiTags {

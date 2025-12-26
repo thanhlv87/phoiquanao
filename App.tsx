@@ -10,6 +10,7 @@ import { CollectionsScreen } from './screens/CollectionsScreen';
 import { CollectionDetailScreen } from './screens/CollectionDetailScreen';
 import { MixMatchScreen } from './screens/MixMatchScreen';
 import { StatisticsScreen } from './screens/StatisticsScreen';
+import { ClosetScreen } from './screens/ClosetScreen';
 import { BottomNav } from './components/BottomNav';
 import { OutfitProvider } from './hooks/useOutfits';
 import { AuthProvider } from './hooks/useAuth';
@@ -25,7 +26,7 @@ function App() {
       <CollectionProvider>
         <OutfitProvider>
           <MixProvider>
-            <div className="max-w-lg mx-auto bg-slate-50 min-h-screen font-sans">
+            <div className="max-w-lg mx-auto bg-slate-50 min-h-screen font-sans shadow-2xl">
               <main className={showNav ? "pb-20" : ""}>
                 <Routes>
                   <Route path="/" element={<HomeScreen />} />
@@ -35,6 +36,7 @@ function App() {
                   <Route path="/collection/:collectionId" element={<CollectionDetailScreen />} />
                   <Route path="/mix" element={<MixMatchScreen />} />
                   <Route path="/stats" element={<StatisticsScreen />} />
+                  <Route path="/closet" element={<ClosetScreen />} />
                   <Route path="/add-outfit/:date" element={<AddOutfitScreen />} />
                   <Route path="/outfit/:outfitId" element={<AddOutfitScreen />} />
                   <Route path="/auth" element={<AuthScreen />} />

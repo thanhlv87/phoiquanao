@@ -2,7 +2,7 @@
 import React from 'react';
 
 interface IconProps extends React.SVGProps<SVGSVGElement> {
-  name: 'home' | 'calendar' | 'plus' | 'camera' | 'back' | 'chevron-left' | 'chevron-right' | 'search' | 'google' | 'logout' | 'sparkles' | 'mail' | 'lock' | 'collections' | 'mix' | 'trash' | 'chart-bar';
+  name: 'home' | 'calendar' | 'plus' | 'camera' | 'back' | 'chevron-left' | 'chevron-right' | 'search' | 'google' | 'logout' | 'sparkles' | 'mail' | 'lock' | 'collections' | 'mix' | 'trash' | 'chart-bar' | 'closet';
 }
 
 export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
@@ -12,6 +12,16 @@ export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
           <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
           <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+      );
+    case 'closet':
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M20 10V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3" />
+          <path d="M2 14h20" />
+          <path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v4" />
+          <path d="M12 2v3" />
+          <path d="M12 10v4" />
         </svg>
       );
     case 'calendar':

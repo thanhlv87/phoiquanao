@@ -1,149 +1,38 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Icon } from '../components/Icon';
-import { fileToBase64 } from '../utils/imageUtils';
-import { generateMixImage } from '../services/geminiService';
+import { generateMixImage, suggestComboFromWardrobe } from '../services/geminiService';
 import { useMixes } from '../hooks/useMixes';
 import { useAuth } from '../hooks/useAuth';
+import { MixResult, WardrobeItem } from '../types';
+import { getDefaultModel, saveDefaultModel, getWardrobe } from '../services/firebaseService';
 import { compressImage } from '../utils/imageCompression';
-import { MixResult } from '../types';
-import { getDefaultModel, saveDefaultModel } from '../services/firebaseService';
 
-// --- IndexedDB Helper for Local Caching ---
-const DB_NAME = 'outfit_logger_db';
-const STORE_NAME = 'settings';
-
-const openDB = (): Promise<IDBDatabase> => {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, 1);
-        request.onupgradeneeded = (event) => {
-            const db = (event.target as IDBOpenDBRequest).result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME);
-            }
-        };
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-};
-
-const saveToLocal = async (key: string, value: string) => {
-    try {
-        const db = await openDB();
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        tx.objectStore(STORE_NAME).put(value, key);
-        return new Promise<void>((resolve, reject) => {
-             tx.oncomplete = () => resolve();
-             tx.onerror = () => reject(tx.error);
-        });
-    } catch (e) {
-        console.error("IDB Save Error", e);
-    }
-};
-
-const getFromLocal = async (key: string): Promise<string | undefined> => {
-     try {
-        const db = await openDB();
-        const tx = db.transaction(STORE_NAME, 'readonly');
-        const req = tx.objectStore(STORE_NAME).get(key);
-         return new Promise((resolve, reject) => {
-             req.onsuccess = () => resolve(req.result);
-             req.onerror = () => reject(req.error);
-        });
-    } catch (e) {
-        console.error("IDB Get Error", e);
-        return undefined;
-    }
-};
-
-const ImageUploader: React.FC<{ 
-    label: string; 
-    imageSrc: string | null; 
-    onImageSelect: (file: File) => void;
-    onRemove: () => void;
-    isLoading?: boolean;
-}> = ({ label, imageSrc, onImageSelect, onRemove, isLoading = false }) => {
-    const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            onImageSelect(e.target.files[0]);
-        }
-    };
-
-    return (
-        <div className="flex flex-col items-center">
-            <div 
-                onClick={() => !isLoading && fileInputRef.current?.click()}
-                className={`w-full aspect-[3/4] rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors relative overflow-hidden bg-white ${imageSrc ? 'border-transparent' : 'border-gray-300 hover:border-blue-500 hover:bg-gray-50'}`}
-            >
-                {isLoading ? (
-                    <div className="flex flex-col items-center text-gray-400">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-2"></div>
-                        <span className="text-xs">Đang tải...</span>
-                    </div>
-                ) : imageSrc ? (
-                    <>
-                        <img src={imageSrc} alt={label} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                             <Icon name="camera" className="w-8 h-8 text-white" />
-                        </div>
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); onRemove(); }}
-                            className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 hover:bg-red-500 z-10"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </>
-                ) : (
-                    <>
-                        <Icon name="plus" className="w-8 h-8 text-gray-400 mb-2" />
-                        <span className="text-xs text-gray-500 font-medium">{label}</span>
-                    </>
-                )}
-                <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleChange} 
-                    accept="image/*" 
-                    className="hidden" 
-                />
-            </div>
-        </div>
-    );
-};
-
-const DeleteConfirmationModal: React.FC<{
-    isOpen: boolean;
-    onClose: () => void;
+// --- Modal Component ---
+const DeleteConfirmModal: React.FC<{ 
+    onClose: () => void; 
     onConfirm: () => void;
-}> = ({ isOpen, onClose, onConfirm }) => {
-    if (!isOpen) return null;
-
+}> = ({ onClose, onConfirm }) => {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-fade-in" onClick={onClose}>
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
-                <div className="p-6 text-center">
-                    <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-                        <Icon name="trash" className="w-6 h-6 text-red-600" />
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">Xóa kết quả phối đồ?</h3>
-                    <p className="text-gray-500 text-sm">Hành động này không thể hoàn tác. Ảnh kết quả sẽ bị xóa vĩnh viễn khỏi lịch sử của bạn.</p>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+            <div className="bg-white rounded-[2.5rem] w-full max-w-xs p-8 shadow-2xl animate-scale-up" onClick={e => e.stopPropagation()}>
+                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Icon name="trash" className="w-10 h-10 text-red-500" />
                 </div>
-                <div className="flex border-t border-gray-200">
-                    <button 
-                        onClick={onClose}
-                        className="flex-1 px-4 py-3 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-                    >
-                        Hủy
-                    </button>
+                <h3 className="text-xl font-black text-slate-800 text-center mb-2 uppercase tracking-tight">Xóa ảnh này?</h3>
+                <p className="text-slate-500 text-sm text-center mb-8 font-medium">Ảnh phối đồ sẽ bị xóa vĩnh viễn và không thể khôi phục.</p>
+                <div className="flex flex-col gap-3">
                     <button 
                         onClick={onConfirm}
-                        className="flex-1 px-4 py-3 text-red-600 font-bold hover:bg-red-50 transition-colors border-l border-gray-200"
+                        className="w-full bg-red-500 text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-all"
                     >
-                        Xóa
+                        XÓA NGAY
+                    </button>
+                    <button 
+                        onClick={onClose}
+                        className="w-full bg-slate-100 text-slate-500 font-black py-4 rounded-2xl active:scale-95 transition-all"
+                    >
+                        BỎ QUA
                     </button>
                 </div>
             </div>
@@ -151,249 +40,258 @@ const DeleteConfirmationModal: React.FC<{
     );
 };
 
-// Utility to convert URL to Base64 (needed because Gemini API likes Base64 in inlineData)
-const urlToBase64 = async (url: string): Promise<string> => {
-    try {
-        // Attempt to fetch with CORS mode.
-        // If Firebase Storage is not configured for CORS, this will likely fail.
-        const response = await fetch(url, { mode: 'cors' });
-        if (!response.ok) throw new Error(`Fetch failed with status: ${response.status}`);
-        const blob = await response.blob();
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    } catch (error) {
-        console.warn("Could not load image from URL (likely CORS issue). Using local cache if available.", error);
-        return "";
-    }
+const ClosetPicker: React.FC<{ 
+    isOpen: boolean; 
+    onClose: () => void; 
+    items: WardrobeItem[]; 
+    onSelect: (item: WardrobeItem) => void;
+    category: string;
+}> = ({ isOpen, onClose, items, onSelect, category }) => {
+    if (!isOpen) return null;
+    const filteredItems = items.filter(i => category === 'top' ? i.category === 'top' : (i.category === 'bottom' || i.category === 'skirt' || i.category === 'dress'));
+
+    return (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-end animate-fade-in" onClick={onClose}>
+            <div className="bg-white w-full rounded-t-[40px] max-h-[80vh] overflow-y-auto p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
+                <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6" />
+                <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-2 uppercase tracking-tight">
+                    <Icon name="closet" className="text-indigo-600" />
+                    {category === 'top' ? 'Chọn Áo' : 'Chọn Quần/Váy'}
+                </h3>
+                {filteredItems.length === 0 ? (
+                    <div className="text-center py-20 text-slate-400 font-bold uppercase text-[10px]">
+                        Tủ đồ chưa có món này.
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-3 gap-4">
+                        {filteredItems.map(item => (
+                            <div key={item.id} onClick={() => { onSelect(item); onClose(); }} className="aspect-[3/4] bg-slate-50 rounded-2xl overflow-hidden border-2 border-transparent hover:border-indigo-500 transition-all cursor-pointer relative">
+                                <img src={item.imageUrl} className="w-full h-full object-contain" alt="item" />
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <button onClick={onClose} className="w-full mt-8 bg-slate-100 text-slate-600 font-black py-4 rounded-2xl uppercase text-xs">Đóng</button>
+            </div>
+        </div>
+    );
 };
 
 export const MixMatchScreen: React.FC = () => {
-    const { state, addMix, deleteMix } = useMixes();
+    const { state: mixState, addMix, deleteMix } = useMixes();
     const { user } = useAuth();
+    
+    const [wardrobe, setWardrobe] = useState<WardrobeItem[]>([]);
     const [modelImage, setModelImage] = useState<string | null>(null);
-    const [isModelLoading, setIsModelLoading] = useState(false);
     const [topImage, setTopImage] = useState<string | null>(null);
     const [bottomImage, setBottomImage] = useState<string | null>(null);
     const [resultImage, setResultImage] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [saveStatus, setSaveStatus] = useState<'saving' | 'saved' | 'failed' | 'guest' | null>(null);
+    const [stylistReason, setStylistReason] = useState<string | null>(null);
+    const [pickerConfig, setPickerConfig] = useState<{ isOpen: boolean, category: 'top' | 'bottom' }>({ isOpen: false, category: 'top' });
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
     
-    // Deletion State
+    // State cho Modal xóa
     const [mixToDelete, setMixToDelete] = useState<MixResult | null>(null);
 
-    // Load default model image on mount
-    useEffect(() => {
-        const loadDefaultModel = async () => {
-            if (user) {
-                setIsModelLoading(true);
-                // Strategy: Try IndexedDB cache first (fast, no CORS issues)
-                try {
-                    const localBase64 = await getFromLocal(`defaultModel_${user.uid}`);
-                    if (localBase64) {
-                        setModelImage(localBase64);
-                        setIsModelLoading(false);
-                        return;
-                    }
-                } catch (e) {
-                    console.warn("Failed to load from local cache", e);
-                }
+    const modelInputRef = useRef<HTMLInputElement>(null);
 
-                // If not in cache, try Firebase URL
-                const defaultUrl = await getDefaultModel(user.uid);
-                if (defaultUrl) {
-                    const base64 = await urlToBase64(defaultUrl);
-                    if (base64) {
-                        setModelImage(base64);
-                        // Save to cache for next time
-                        await saveToLocal(`defaultModel_${user.uid}`, base64);
-                    }
-                }
-                setIsModelLoading(false);
-            }
-        };
-        loadDefaultModel();
+    useEffect(() => {
+        if (user) {
+            getWardrobe(user.uid).then(setWardrobe);
+            getDefaultModel(user.uid).then(url => url && setModelImage(url));
+        }
     }, [user]);
 
-    const handleFileSelect = async (file: File, setter: (s: string | null) => void) => {
+    const handleModelChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !user) return;
+        
+        setIsGenerating(true);
+        setErrorMsg(null);
         try {
-            const compressed = await compressImage(file, { maxWidth: 800, quality: 0.8 });
-            const base64 = await fileToBase64(compressed);
-            setter(base64);
-        } catch (e) {
-            console.error("Error processing image", e);
-            setError("Lỗi xử lý ảnh.");
+            const compressedBase64 = await compressImage(file, { maxWidth: 800, quality: 0.7 });
+            setModelImage(compressedBase64);
+            await saveDefaultModel(user.uid, compressedBase64);
+        } catch (error) {
+            console.error("Model image error:", error);
+            setErrorMsg("Lỗi khi xử lý ảnh người mẫu.");
+        } finally {
+            setIsGenerating(false);
         }
     };
 
     const handleGenerate = async () => {
-        if (!modelImage || !topImage || !bottomImage) {
-            setError("Vui lòng tải lên đủ 3 ảnh: Người mẫu, Áo và Quần/Váy.");
-            return;
-        }
+        if (!modelImage || !topImage || !bottomImage) return;
 
         setIsGenerating(true);
-        setError(null);
-        setResultImage(null);
-        setSaveStatus(null);
-
-        let generatedImageBase64 = "";
-
-        // Bước 1: Tạo ảnh
+        setErrorMsg(null);
         try {
-            generatedImageBase64 = await generateMixImage(modelImage, topImage, bottomImage);
-            setResultImage(generatedImageBase64);
-        } catch (err) {
-            console.error("Generation failed", err);
-            setError("Không thể tạo ảnh phối đồ. Có thể do lỗi mạng hoặc chính sách an toàn của AI.");
-            setIsGenerating(false);
-            return; // Dừng nếu tạo ảnh thất bại
-        }
-
-        setIsGenerating(false);
-
-        // Bước 2: Lưu ảnh (Chạy ngầm, không chặn hiển thị ảnh)
-        if (generatedImageBase64) {
+            const res = await generateMixImage(modelImage, topImage, bottomImage);
+            setResultImage(res);
             if (user) {
-                setSaveStatus('saving');
-                try {
-                    // addMix trả về MixResult chứa URL ảnh remote (Firebase Storage URL)
-                    const savedMix = await addMix(modelImage, topImage, bottomImage, generatedImageBase64);
-                    setSaveStatus('saved');
-
-                    // Tự động lưu ảnh model hiện tại làm mặc định
-                    if (savedMix.modelImageUrl) {
-                        await saveDefaultModel(user.uid, savedMix.modelImageUrl);
-                        
-                        // QUAN TRỌNG: Lưu cả bản base64 vào cache cục bộ để tránh lỗi CORS khi tải lại
-                        if (modelImage) {
-                            await saveToLocal(`defaultModel_${user.uid}`, modelImage);
-                        }
-                    }
-
-                } catch (saveError) {
-                    console.error("Auto-save failed", saveError);
-                    setSaveStatus('failed');
-                    // Không set Error chính để tránh che mất ảnh kết quả
-                }
-            } else {
-                setSaveStatus('guest');
+                // Upload sẽ chạy ngầm
+                await addMix(modelImage, topImage, bottomImage, res);
             }
+        } catch (e: any) { 
+            console.error(e);
+            setErrorMsg(e.message || "Không thể tạo ảnh phối đồ."); 
+        } finally { 
+            setIsGenerating(false); 
         }
     };
 
-    const confirmDelete = async () => {
-        if (mixToDelete) {
-            try {
-                await deleteMix(mixToDelete.id, mixToDelete.resultImageUrl);
-            } catch (err) {
-                console.error("Delete failed", err);
-                alert("Xóa thất bại. Vui lòng thử lại."); // Fallback alert if optimistic update fails badly
-            } finally {
-                setMixToDelete(null);
+    const handleSmartSuggest = async (type: string) => {
+        if (!user || wardrobe.length < 2) {
+            alert("Cần ít nhất 1 áo và 1 quần trong tủ đồ!");
+            return;
+        }
+        setIsGenerating(true);
+        setErrorMsg(null);
+        try {
+            const suggestion = await suggestComboFromWardrobe(wardrobe, type);
+            const top = wardrobe.find(w => w.id === suggestion.topId);
+            const bottom = wardrobe.find(w => w.id === suggestion.bottomId);
+            if (top && bottom) {
+                setTopImage(top.imageUrl);
+                setBottomImage(bottom.imageUrl);
+                setStylistReason(suggestion.reason);
             }
+        } catch (e) { console.error(e); }
+        finally { setIsGenerating(false); }
+    };
+
+    // Hàm thực hiện xóa sau khi Confirm từ Modal
+    const executeDeleteMix = async () => {
+        if (!mixToDelete) return;
+        try {
+            await deleteMix(mixToDelete.id, mixToDelete.resultImageUrl);
+            setMixToDelete(null); // Đóng modal
+        } catch (e) {
+            console.error(e);
+            setErrorMsg("Không thể xóa ảnh. Vui lòng thử lại.");
         }
     };
 
+    const handleHistoryClick = (mix: MixResult) => {
+        setModelImage(mix.modelImageUrl);
+        setTopImage(mix.topImageUrl);
+        setBottomImage(mix.bottomImageUrl);
+        setResultImage(mix.resultImageUrl);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    
     return (
-        <div className="p-4 md:p-6 pb-24 min-h-screen bg-slate-50">
-            <DeleteConfirmationModal 
-                isOpen={!!mixToDelete} 
-                onClose={() => setMixToDelete(null)} 
-                onConfirm={confirmDelete} 
+        <div className="p-4 md:p-6 pb-24 bg-slate-50 min-h-screen">
+            <ClosetPicker 
+                isOpen={pickerConfig.isOpen} 
+                onClose={() => setPickerConfig({ ...pickerConfig, isOpen: false })} 
+                category={pickerConfig.category}
+                items={wardrobe}
+                onSelect={(item) => pickerConfig.category === 'top' ? setTopImage(item.imageUrl) : setBottomImage(item.imageUrl)}
             />
 
-            <header className="mb-6">
-                <h1 className="text-3xl font-bold text-gray-800">Phối Đồ AI</h1>
-                <p className="text-gray-500">Thử trang phục ảo ngay lập tức.</p>
+            {/* Modal Xóa */}
+            {mixToDelete && (
+                <DeleteConfirmModal 
+                    onClose={() => setMixToDelete(null)} 
+                    onConfirm={executeDeleteMix} 
+                />
+            )}
+            
+            <input type="file" ref={modelInputRef} onChange={handleModelChange} className="hidden" accept="image/*" />
+
+            <header className="mb-8">
+                <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase italic">AI Stylist</h1>
+                <p className="text-slate-500 font-bold text-xs">Mặc thử trang phục bằng công nghệ Vision</p>
             </header>
 
-            <main>
-                <div className="grid grid-cols-3 gap-3 mb-6">
-                    <ImageUploader 
-                        label="Người mẫu" 
-                        imageSrc={modelImage} 
-                        onImageSelect={(f) => handleFileSelect(f, setModelImage)} 
-                        onRemove={() => setModelImage(null)}
-                        isLoading={isModelLoading}
-                    />
-                    <ImageUploader 
-                        label="Áo" 
-                        imageSrc={topImage} 
-                        onImageSelect={(f) => handleFileSelect(f, setTopImage)} 
-                        onRemove={() => setTopImage(null)}
-                    />
-                    <ImageUploader 
-                        label="Quần/Váy" 
-                        imageSrc={bottomImage} 
-                        onImageSelect={(f) => handleFileSelect(f, setBottomImage)} 
-                        onRemove={() => setBottomImage(null)}
-                    />
+            <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+                <button onClick={() => handleSmartSuggest("Đi chơi cuối tuần")} className="whitespace-nowrap bg-white border border-slate-200 px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-700 shadow-sm">🎲 Ngẫu hứng</button>
+                <button onClick={() => handleSmartSuggest("Phong cách thanh lịch đi làm")} className="whitespace-nowrap bg-white border border-slate-200 px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-700 shadow-sm">💼 Công sở</button>
+            </div>
+
+            {stylistReason && (
+                <div className="bg-indigo-600 p-5 rounded-[2rem] mb-10 shadow-xl animate-scale-up">
+                    <p className="text-white text-[11px] font-bold italic leading-relaxed leading-snug">"{stylistReason}"</p>
+                </div>
+            )}
+            
+            {errorMsg && (
+                <div className="bg-red-50 border border-red-200 p-4 rounded-2xl mb-6 flex items-start gap-3">
+                    <Icon name="trash" className="text-red-500 w-5 h-5 flex-shrink-0" />
+                    <p className="text-red-600 text-xs font-bold">{errorMsg}</p>
+                </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-5 mb-10">
+                <div className="flex flex-col gap-3">
+                    <div onClick={() => modelInputRef.current?.click()} className="w-full aspect-[3/4] rounded-[2rem] border-2 border-dashed border-slate-300 flex items-center justify-center bg-white overflow-hidden relative shadow-inner">
+                        {modelImage ? (
+                            <img src={modelImage} className="w-full h-full object-cover" alt="model" />
+                        ) : (
+                            <Icon name="camera" className="text-slate-300 w-8 h-8" />
+                        )}
+                    </div>
+                    <span className="text-[9px] font-black uppercase text-center text-slate-400">Người mẫu</span>
                 </div>
 
-                <button
-                    onClick={handleGenerate}
-                    disabled={isGenerating || !modelImage || !topImage || !bottomImage}
-                    className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold py-3 rounded-xl shadow-lg hover:from-pink-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-8"
-                >
-                    {isGenerating ? (
-                        <>
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                            <span>Đang phù phép...</span>
-                        </>
-                    ) : (
-                        <>
-                            <Icon name="sparkles" className="w-5 h-5" />
-                            <span>Mix Ngay</span>
-                        </>
-                    )}
-                </button>
-
-                {error && <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6 text-center text-sm">{error}</div>}
-
-                {resultImage && (
-                    <div className="bg-white p-4 rounded-2xl shadow-xl mb-8 animate-fade-in border border-purple-100">
-                        <h2 className="text-lg font-bold text-gray-800 mb-3 text-center">Kết quả</h2>
-                        <div className="aspect-[3/4] w-full rounded-xl overflow-hidden shadow-inner bg-gray-100">
-                            <img src={resultImage} alt="Mix Result" className="w-full h-full object-cover" />
-                        </div>
-                        <div className="text-center text-xs text-gray-500 mt-2">
-                            {saveStatus === 'saving' && <span className="text-blue-500">Đang lưu vào lịch sử...</span>}
-                            {saveStatus === 'saved' && <span className="text-green-600">Đã lưu vào lịch sử.</span>}
-                            {saveStatus === 'failed' && <span className="text-orange-500">Lưu thất bại (bạn có thể lưu ảnh thủ công).</span>}
-                            {saveStatus === 'guest' && <span className="text-gray-500">Đăng nhập để lưu kết quả vào lịch sử.</span>}
-                        </div>
+                <div className="flex flex-col gap-3">
+                    <div onClick={() => setPickerConfig({ isOpen: true, category: 'top' })} className="w-full aspect-[3/4] rounded-[2rem] border-2 border-dashed border-slate-300 flex items-center justify-center bg-white overflow-hidden shadow-inner">
+                        {topImage ? <img src={topImage} className="w-full h-full object-contain" alt="top" /> : <Icon name="plus" className="text-slate-300 w-8 h-8" />}
                     </div>
-                )}
+                    <span className="text-[9px] font-black uppercase text-center text-slate-400">Áo</span>
+                </div>
 
-                {user && state.mixes.length > 0 && (
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-800 mb-4">Lịch sử phối đồ</h2>
-                        <div className="grid grid-cols-2 gap-4">
-                            {state.mixes.map(mix => (
-                                <div key={mix.id} className="bg-white rounded-xl shadow overflow-hidden relative group">
-                                    <img src={mix.resultImageUrl} alt="Historical Mix" className="w-full aspect-[3/4] object-cover" />
-                                    <div className="p-2 flex gap-1 justify-center bg-gray-50">
-                                        <img src={mix.topImageUrl} className="w-8 h-8 rounded object-cover border border-gray-200" />
-                                        <img src={mix.bottomImageUrl} className="w-8 h-8 rounded object-cover border border-gray-200" />
-                                    </div>
-                                    <button 
-                                        onClick={() => setMixToDelete(mix)}
-                                        className="absolute top-2 right-2 p-2 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 focus:opacity-100"
-                                        title="Xóa"
-                                    >
-                                        <Icon name="trash" className="w-4 h-4" />
-                                    </button>
+                <div className="flex flex-col gap-3">
+                    <div onClick={() => setPickerConfig({ isOpen: true, category: 'bottom' })} className="w-full aspect-[3/4] rounded-[2rem] border-2 border-dashed border-slate-300 flex items-center justify-center bg-white overflow-hidden shadow-inner">
+                        {bottomImage ? <img src={bottomImage} className="w-full h-full object-contain" alt="bottom" /> : <Icon name="plus" className="text-slate-300 w-8 h-8" />}
+                    </div>
+                    <span className="text-[9px] font-black uppercase text-center text-slate-400">Quần/Váy</span>
+                </div>
+            </div>
+
+            <button 
+                onClick={handleGenerate} 
+                disabled={isGenerating || !modelImage || !topImage || !bottomImage} 
+                className={`w-full font-black py-6 rounded-[2.5rem] shadow-2xl transition-all uppercase tracking-widest text-xs ${isGenerating ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white active:scale-95'}`}
+            >
+                {isGenerating ? "AI ĐANG THỬ ĐỒ VÀ LƯU LẠI..." : "BẮT ĐẦU PHỐI ĐỒ"}
+            </button>
+
+            {resultImage && (
+                <div className="mt-16 bg-white p-6 rounded-[3rem] shadow-2xl border border-slate-100 animate-fade-in mb-10">
+                    <h3 className="font-black text-slate-800 mb-6 uppercase tracking-widest text-[10px] text-center">Kết quả phối đồ</h3>
+                    <div className="rounded-[2.5rem] overflow-hidden bg-slate-50 border-8 border-white shadow-inner">
+                        <img src={resultImage} className="w-full h-auto" alt="Mix result" />
+                    </div>
+                </div>
+            )}
+
+            {/* History Section */}
+            {mixState.mixes.length > 0 && (
+                <div className="mt-12">
+                     <div className="flex items-center gap-2 mb-6 px-2">
+                        <Icon name="mix" className="text-slate-400 w-4 h-4" />
+                        <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Lịch sử phối đồ</h3>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        {mixState.mixes.map(mix => (
+                            <div key={mix.id} className="group relative bg-white p-2 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-lg transition-all">
+                                <div onClick={() => handleHistoryClick(mix)} className="aspect-[3/4] bg-slate-50 rounded-[1.5rem] overflow-hidden cursor-pointer">
+                                    <img src={mix.resultImageUrl} className="w-full h-full object-cover" alt="History" />
                                 </div>
-                            ))}
-                        </div>
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); setMixToDelete(mix); }}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                >
+                                    <Icon name="trash" className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ))}
                     </div>
-                )}
-            </main>
+                </div>
+            )}
         </div>
     );
 };

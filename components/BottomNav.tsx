@@ -3,32 +3,32 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Icon } from './Icon';
 
-const NavItem: React.FC<{ to: string; icon: 'home' | 'calendar' | 'search' | 'collections' | 'mix' | 'chart-bar' | 'sparkles'; label: string }> = ({ to, icon, label }) => {
-  const activeClass = "text-blue-600";
-  const inactiveClass = "text-gray-500";
+const NavItem: React.FC<{ to: string; icon: 'home' | 'calendar' | 'search' | 'collections' | 'mix' | 'chart-bar' | 'sparkles' | 'closet'; label: string }> = ({ to, icon, label }) => {
+  const activeClass = "text-indigo-600";
+  const inactiveClass = "text-slate-400";
 
   return (
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `flex flex-col items-center justify-center w-full pt-2 pb-1 transition-colors ${isActive ? activeClass : inactiveClass}`
+        `flex flex-col items-center justify-center w-full pt-2 pb-1 transition-all ${isActive ? activeClass + ' scale-110' : inactiveClass}`
       }
     >
       <Icon name={icon as any} className="w-6 h-6 mb-1" />
-      <span className="text-[10px] font-medium">{label}</span>
+      <span className="text-[10px] font-bold uppercase tracking-tighter">{label}</span>
     </NavLink>
   );
 };
 
 export const BottomNav: React.FC = () => {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-10 bg-white border-t border-gray-200 shadow-t-md">
-      <div className="flex justify-around max-w-lg mx-auto">
-        <NavItem to="/" icon="home" label="Trang chủ" />
-        <NavItem to="/collections" icon="collections" label="Bộ sưu tập" />
-        <NavItem to="/mix" icon="sparkles" label="Mix Đồ" />
-        <NavItem to="/stats" icon="chart-bar" label="Thống kê" />
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+      <div className="flex justify-around max-w-lg mx-auto px-2">
+        <NavItem to="/" icon="home" label="Home" />
+        <NavItem to="/closet" icon="closet" label="Tủ đồ" />
+        <NavItem to="/mix" icon="sparkles" label="Mix AI" />
         <NavItem to="/calendar" icon="calendar" label="Lịch" />
+        <NavItem to="/stats" icon="chart-bar" label="Thống kê" />
       </div>
     </nav>
   );

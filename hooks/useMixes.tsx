@@ -71,7 +71,7 @@ export const MixProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }));
 
         try {
-            await deleteMixResult(user.uid, mixId, resultImageUrl);
+            await deleteMixResult(user.uid, mixId);
         } catch (error) {
             console.error("Failed to delete mix in hook:", error);
             // Revert state if failed

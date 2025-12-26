@@ -1,247 +1,161 @@
 
-import { collection, getDocs, setDoc, doc, deleteDoc, addDoc, Timestamp, writeBatch, orderBy, query, getDoc } from "@firebase/firestore";
-import { ref, uploadBytes, getDownloadURL, deleteObject, listAll, uploadString } from "@firebase/storage";
+import { collection, getDocs, setDoc, doc, deleteDoc, addDoc, query, orderBy, getDoc } from "@firebase/firestore";
+import { ref, uploadString, getDownloadURL, deleteObject } from "@firebase/storage";
 import { db, storage } from './firebaseConfig';
-import { Outfit, Collection, MixResult } from '../types';
-import { fileToBase64 } from '../utils/imageUtils';
+import { Outfit, Collection, MixResult, WardrobeItem } from '../types';
 
-// Helper: Upload ảnh lên Firebase Storage từ File object
-const uploadOutfitImages = async (userId: string, outfitId: string, files: File[]): Promise<string[]> => {
-    const uploadPromises = files.map(async (file, index) => {
-        const ext = file.name.split('.').pop() || 'jpg';
-        const fileName = `users/${userId}/images/${outfitId}/${Date.now()}-${index}.${ext}`;
-        const storageRef = ref(storage, fileName);
-        
-        await uploadBytes(storageRef, file);
-        return await getDownloadURL(storageRef);
+// Helper: Convert File to Base64 string
+const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = error => reject(error);
     });
-
-    return Promise.all(uploadPromises);
 };
 
-// Helper: Upload Base64 lên Firebase Storage
-const uploadBase64ToStorage = async (userId: string, folderName: string, base64Data: string): Promise<string> => {
-    // Đảm bảo chuỗi base64 hợp lệ (data:image/png;base64,...)
-    if (!base64Data.startsWith('data:')) {
-        throw new Error('Invalid base64 string format');
+// --- Wardrobe (TỦ ĐỒ) ---
+// YÊU CẦU: Lưu ảnh trực tiếp vào Firestore (Base64) để tránh lỗi CORS khi Mix
+export const getWardrobe = async (userId: string): Promise<WardrobeItem[]> => {
+    try {
+        const ref = collection(db, 'users', userId, 'wardrobe');
+        const snap = await getDocs(ref);
+        return snap.docs.map(d => ({ id: d.id, ...d.data() } as WardrobeItem));
+    } catch (e) {
+        console.error("Error fetching wardrobe:", e);
+        return [];
     }
+};
 
-    const fileName = `users/${userId}/${folderName}/${Date.now()}-${Math.random().toString(36).substring(7)}.png`;
-    const storageRef = ref(storage, fileName);
+export const addToWardrobe = async (userId: string, item: Omit<WardrobeItem, 'id'>): Promise<WardrobeItem> => {
+    // 1. Lưu Base64 trực tiếp vào Firestore document
+    const wardrobeRef = collection(db, 'users', userId, 'wardrobe');
+    const docRef = await addDoc(wardrobeRef, item);
+    return { id: docRef.id, ...item };
+};
 
-    // uploadString tự động xử lý data_url
-    await uploadString(storageRef, base64Data, 'data_url');
-    return await getDownloadURL(storageRef);
-}
+export const deleteFromWardrobe = async (userId: string, itemId: string): Promise<void> => {
+    await deleteDoc(doc(db, 'users', userId, 'wardrobe', itemId));
+};
 
-
-// --- Outfits ---
-
+// --- Outfits (NHẬT KÝ) ---
+// Tương tự Tủ đồ, lưu Base64 vào Firestore để đồng bộ
 export const getOutfits = async (userId: string): Promise<Outfit[]> => {
-  try {
-    const outfitsCollectionRef = collection(db, 'users', userId, 'outfits');
-    const querySnapshot = await getDocs(outfitsCollectionRef);
-    const outfits: Outfit[] = [];
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      outfits.push({
-        id: doc.id,
-        date: data.date,
-        dateId: data.dateId,
-        imageUrls: data.imageUrls || [],
-        tops: data.tops || [],
-        bottoms: data.bottoms || [],
-        tags: data.tags || [],
-        collectionIds: data.collectionIds || [],
-      } as Outfit);
-    });
-    return outfits;
-  } catch (error) {
-    console.error("Error fetching outfits from Firestore: ", error);
-    throw error;
-  }
+    const ref = collection(db, 'users', userId, 'outfits');
+    const snap = await getDocs(ref);
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Outfit));
 };
 
-export const addOrUpdateOutfit = async (
-  userId: string,
-  outfitData: Omit<Outfit, 'imageUrls'> & { newImageFiles: File[], existingImageUrls: string[] }
-): Promise<Outfit> => {
-  try {
-    const isUpdating = !!outfitData.id;
-    const outfitDocRef = isUpdating
-      ? doc(db, 'users', userId, 'outfits', outfitData.id)
-      : doc(collection(db, 'users', userId, 'outfits'));
+export const addOrUpdateOutfit = async (userId: string, outfitData: any): Promise<Outfit> => {
+    let updatedImageUrls = [...(outfitData.existingImageUrls || [])];
 
-    const outfitId = outfitDocRef.id;
-
-    // Upload ảnh mới lên Firebase Storage
-    let newImageUrls: string[] = [];
-    if (outfitData.newImageFiles.length > 0) {
-         newImageUrls = await uploadOutfitImages(userId, outfitId, outfitData.newImageFiles);
+    if (outfitData.newImageFiles && outfitData.newImageFiles.length > 0) {
+        const newBase64s = await Promise.all(
+            outfitData.newImageFiles.map((file: File) => fileToBase64(file))
+        );
+        updatedImageUrls = [...updatedImageUrls, ...newBase64s];
     }
-    
-    const finalImageUrls = [...outfitData.existingImageUrls, ...newImageUrls];
 
-    const outfitForFirestore: Outfit = {
-      id: outfitId,
-      date: outfitData.date,
-      dateId: outfitData.dateId,
-      imageUrls: finalImageUrls,
-      tops: outfitData.tops,
-      bottoms: outfitData.bottoms,
-      tags: outfitData.tags,
-      collectionIds: outfitData.collectionIds || [],
+    const dataToSave = {
+        ...outfitData,
+        imageUrls: updatedImageUrls,
     };
+    delete dataToSave.newImageFiles;
+    delete dataToSave.existingImageUrls;
 
-    await setDoc(outfitDocRef, outfitForFirestore);
-    
-    return outfitForFirestore;
-  } catch (error) {
-    console.error("Error saving outfit: ", error);
-    throw error;
-  }
+    const docRef = outfitData.id ? doc(db, 'users', userId, 'outfits', outfitData.id) : doc(collection(db, 'users', userId, 'outfits'));
+    const outfit = { ...dataToSave, id: docRef.id };
+    await setDoc(docRef, outfit, { merge: true });
+    return outfit;
 };
 
 export const deleteOutfit = async (userId: string, outfitId: string): Promise<void> => {
+    await deleteDoc(doc(db, 'users', userId, 'outfits', outfitId));
+};
+
+// --- Mix Results (KẾT QUẢ MIX) ---
+// YÊU CẦU: Ảnh kết quả lưu vào Firebase Storage, Ảnh input lưu Base64 vào Firestore
+export const saveMixResult = async (userId: string, model: string, top: string, bottom: string, result: string): Promise<MixResult> => {
+    
+    // 1. Upload ảnh kết quả (result) lên Firebase Storage
+    // Tạo tên file duy nhất dựa trên timestamp
+    const fileName = `mix_${Date.now()}.jpg`;
+    const storageRef = ref(storage, `users/${userId}/mix_results/${fileName}`);
+    
+    // Upload chuỗi Base64 (dạng data_url) lên Storage
+    await uploadString(storageRef, result, 'data_url');
+    
+    // Lấy URL công khai (Download URL)
+    const resultUrl = await getDownloadURL(storageRef);
+
+    // 2. Lưu metadata vào Firestore
+    // - modelImageUrl, topImageUrl, bottomImageUrl: Lưu Base64 (để có thể tái sử dụng làm input nếu cần)
+    // - resultImageUrl: Lưu URL từ Storage (để hiển thị nhẹ nhàng)
+    const data = { 
+        createdAt: new Date().toISOString(), 
+        modelImageUrl: model,  // Base64
+        topImageUrl: top,      // Base64
+        bottomImageUrl: bottom,// Base64
+        resultImageUrl: resultUrl // Storage URL
+    };
+
+    const docRef = await addDoc(collection(db, 'users', userId, 'mix_results'), data);
+    return { id: docRef.id, ...data };
+};
+
+export const getMixResults = async (userId: string): Promise<MixResult[]> => {
+    const q = query(collection(db, 'users', userId, 'mix_results'), orderBy("createdAt", "desc"));
+    const snap = await getDocs(q);
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MixResult));
+};
+
+export const deleteMixResult = async (userId: string, id: string): Promise<void> => {
+    // 1. Lấy thông tin doc để xóa file trong Storage trước
     try {
-        const outfitDocRef = doc(db, 'users', userId, 'outfits', outfitId);
-        await deleteDoc(outfitDocRef);
-
-        // Xóa ảnh trong Firebase Storage
-        // Firebase Storage không hỗ trợ xóa thư mục trực tiếp, phải list tất cả file và xóa từng cái.
-        const folderRef = ref(storage, `users/${userId}/images/${outfitId}`);
-        try {
-            const listResult = await listAll(folderRef);
-            const deletePromises = listResult.items.map(item => deleteObject(item));
-            await Promise.all(deletePromises);
-        } catch (storageError) {
-             console.error("Failed to delete images from Storage (might be empty or permission issue):", storageError);
+        const docRef = doc(db, 'users', userId, 'mix_results', id);
+        const snapshot = await getDoc(docRef);
+        
+        if (snapshot.exists()) {
+            const data = snapshot.data();
+            if (data.resultImageUrl && data.resultImageUrl.includes('firebasestorage')) {
+                // Tạo ref từ URL để xóa
+                const fileRef = ref(storage, data.resultImageUrl);
+                await deleteObject(fileRef).catch(err => console.warn("Lỗi xóa file storage (có thể file không tồn tại):", err));
+            }
         }
-
-    } catch (error) {
-        console.error("Error deleting outfit: ", error);
-        throw error;
+        
+        // 2. Xóa doc trong Firestore
+        await deleteDoc(docRef);
+    } catch (e) {
+        console.error("Lỗi xóa mix result:", e);
+        throw e;
     }
 };
 
 // --- Collections ---
-
 export const getCollections = async (userId: string): Promise<Collection[]> => {
-    try {
-        const collectionsRef = collection(db, 'users', userId, 'collections');
-        const snapshot = await getDocs(collectionsRef);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Collection));
-    } catch (error) {
-        console.error("Error fetching collections:", error);
-        throw error;
-    }
+    const ref = collection(db, 'users', userId, 'collections');
+    const snap = await getDocs(ref);
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Collection));
 };
 
 export const addCollection = async (userId: string, collectionData: Omit<Collection, 'id'>): Promise<Collection> => {
-    try {
-        const collectionsRef = collection(db, 'users', userId, 'collections');
-        const newDocRef = await addDoc(collectionsRef, collectionData);
-        return { id: newDocRef.id, ...collectionData };
-    } catch (error) {
-        console.error("Error adding collection:", error);
-        throw error;
-    }
+    const ref = collection(db, 'users', userId, 'collections');
+    const docRef = await addDoc(ref, collectionData);
+    return { id: docRef.id, ...collectionData };
 };
 
 export const deleteCollection = async (userId: string, collectionId: string): Promise<void> => {
-    try {
-        const collectionDocRef = doc(db, 'users', userId, 'collections', collectionId);
-        await deleteDoc(collectionDocRef);
-    } catch (error) {
-        console.error("Error deleting collection:", error);
-        throw error;
-    }
+    await deleteDoc(doc(db, 'users', userId, 'collections', collectionId));
 };
 
-// --- Mix Results ---
+// --- Default Model ---
+export const saveDefaultModel = async (userId: string, url: string) => {
+    // Lưu Base64 vào Firestore
+    await setDoc(doc(db, 'users', userId), { defaultModelUrl: url }, { merge: true });
+};
 
-export const saveMixResult = async (userId: string, modelBase64: string, topBase64: string, bottomBase64: string, resultBase64: string): Promise<MixResult> => {
-    try {
-        // Upload images to Firebase Storage
-        const modelUrl = await uploadBase64ToStorage(userId, 'mix_inputs', modelBase64);
-        const topUrl = await uploadBase64ToStorage(userId, 'mix_inputs', topBase64);
-        const bottomUrl = await uploadBase64ToStorage(userId, 'mix_inputs', bottomBase64);
-        const resultUrl = await uploadBase64ToStorage(userId, 'mix_results', resultBase64);
-
-        const mixData = {
-            createdAt: new Date().toISOString(),
-            modelImageUrl: modelUrl,
-            topImageUrl: topUrl,
-            bottomImageUrl: bottomUrl,
-            resultImageUrl: resultUrl
-        };
-
-        const mixCollectionRef = collection(db, 'users', userId, 'mix_results');
-        const newDocRef = await addDoc(mixCollectionRef, mixData);
-
-        return { id: newDocRef.id, ...mixData };
-    } catch (error) {
-        console.error("Error saving mix result:", error);
-        throw error;
-    }
-}
-
-export const getMixResults = async (userId: string): Promise<MixResult[]> => {
-    try {
-        const mixCollectionRef = collection(db, 'users', userId, 'mix_results');
-        // Order by created time desc
-        const q = query(mixCollectionRef, orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MixResult));
-    } catch (error) {
-        console.error("Error fetching mix results:", error);
-        throw error;
-    }
-}
-
-export const deleteMixResult = async (userId: string, mixId: string, resultImageUrl: string): Promise<void> => {
-    try {
-        const mixDocRef = doc(db, 'users', userId, 'mix_results', mixId);
-        await deleteDoc(mixDocRef);
-
-        // Try to delete the result image from storage to keep things clean.
-        // We construct a ref from the download URL.
-        try {
-             const imageRef = ref(storage, resultImageUrl);
-             await deleteObject(imageRef);
-        } catch (imgError) {
-            console.warn("Could not delete associated image from storage (it might already be gone):", imgError);
-        }
-
-    } catch (error) {
-        console.error("Error deleting mix result:", error);
-        throw error;
-    }
-}
-
-// --- User Preferences (Model Default) ---
-
-export const saveDefaultModel = async (userId: string, imageUrl: string): Promise<void> => {
-    try {
-        const userDocRef = doc(db, 'users', userId);
-        // setDoc với merge: true sẽ tạo document nếu chưa có, hoặc cập nhật trường cụ thể nếu đã có
-        await setDoc(userDocRef, { defaultModelUrl: imageUrl }, { merge: true });
-    } catch (error) {
-        console.error("Error saving default model:", error);
-        // Không throw error để tránh làm gián đoạn luồng chính, vì đây là tính năng phụ
-    }
-}
-
-export const getDefaultModel = async (userId: string): Promise<string | null> => {
-    try {
-        const userDocRef = doc(db, 'users', userId);
-        const docSnap = await getDoc(userDocRef);
-        if (docSnap.exists()) {
-            return docSnap.data().defaultModelUrl || null;
-        }
-        return null;
-    } catch (error) {
-        console.error("Error fetching default model:", error);
-        return null;
-    }
-}
+export const getDefaultModel = async (userId: string) => {
+    const snap = await getDoc(doc(db, 'users', userId));
+    return snap.exists() ? snap.data().defaultModelUrl : null;
+};

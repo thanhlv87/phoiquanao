@@ -1,49 +1,42 @@
 
-export const compressImage = (file: File, options: { maxWidth: number; quality: number }): Promise<File> => {
+export const compressImage = async (
+  input: File | string, 
+  options: { maxWidth: number; quality: number }
+): Promise<string> => {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onerror = reject;
-    reader.onload = (event) => {
-      if (!event.target?.result) {
-        return reject(new Error("Failed to read file."));
+    const img = new Image();
+    
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > options.maxWidth) {
+        height = Math.round((height * options.maxWidth) / width);
+        width = options.maxWidth;
       }
-      const img = new Image();
-      img.src = event.target.result as string;
-      img.onerror = reject;
-      img.onload = () => {
-        const { maxWidth, quality } = options;
-        let { width, height } = img;
 
-        if (width > maxWidth) {
-          height = Math.round((height * maxWidth) / width);
-          width = maxWidth;
-        }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return reject(new Error('Canvas context failed'));
 
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          return reject(new Error('Could not get canvas context'));
-        }
-        ctx.drawImage(img, 0, 0, width, height);
+      // Vẽ nền trắng nếu là ảnh tách nền (giúp Gemini nhận diện tốt hơn)
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
 
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              return reject(new Error('Canvas toBlob failed'));
-            }
-            const newFile = new File([blob], `compressed_${file.name}`, {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            });
-            resolve(newFile);
-          },
-          'image/jpeg',
-          quality
-        );
-      };
+      // Trả về data URL (base64)
+      const compressedBase64 = canvas.toDataURL('image/jpeg', options.quality);
+      resolve(compressedBase64);
     };
+
+    img.onerror = () => reject(new Error('Failed to load image for compression'));
+
+    if (typeof input === 'string') {
+      img.src = input;
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => { img.src = e.target?.result as string; };
+      reader.readAsDataURL(input);
+    }
   });
 };

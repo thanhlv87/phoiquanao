@@ -3,8 +3,10 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AiTags, WardrobeItem } from '../types';
 
 const getAiClient = () => {
-  if (!process.env.API_KEY) return null;
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
+  // Check for undefined, null, or empty string (common with build tool replacements)
+  if (!apiKey || apiKey.trim() === "") return null;
+  return new GoogleGenAI({ apiKey });
 };
 
 // Hàm xử lý đầu vào ảnh: Ưu tiên Base64 có sẵn từ Firestore
@@ -39,7 +41,7 @@ const getRawBase64 = async (input: string): Promise<string> => {
 
 export const isolateClothingItem = async (imageInput: string, category: string): Promise<string> => {
   const ai = getAiClient();
-  if (!ai) throw new Error("API Key missing");
+  if (!ai) throw new Error("Chưa cấu hình API Key.");
 
   try {
     const rawB64 = await getRawBase64(imageInput);
@@ -72,7 +74,9 @@ export const generateMixImage = async (
     topInput: string, 
     bottomInput: string
 ): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // Sử dụng helper getAiClient để kiểm tra key trước khi khởi tạo
+    const ai = getAiClient();
+    if (!ai) throw new Error("Chưa cấu hình API Key. Vui lòng kiểm tra file .env");
 
     try {
         const [modelB64, topB64, bottomB64] = await Promise.all([
@@ -116,7 +120,7 @@ export const generateMixImage = async (
 
 export const analyzeWardrobeItem = async (imageInput: string): Promise<Partial<WardrobeItem>> => {
   const ai = getAiClient();
-  if (!ai) throw new Error("API Key missing");
+  if (!ai) throw new Error("Chưa cấu hình API Key.");
   
   const rawB64 = await getRawBase64(imageInput);
   if (!rawB64) throw new Error("Lỗi dữ liệu ảnh phân tích.");

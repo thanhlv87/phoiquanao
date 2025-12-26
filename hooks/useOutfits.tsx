@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Outfit } from '../types';
 import { getOutfits, addOrUpdateOutfit as addOrUpdateOutfitService, deleteOutfit as deleteOutfitService } from '../services/firebaseService';
@@ -12,7 +13,7 @@ interface OutfitState {
 
 const OutfitContext = createContext<{
   state: OutfitState;
-  addOrUpdateOutfit: (outfitData: Omit<Outfit, 'imageUrls'> & { newImageFiles: File[], existingImageUrls: string[] }) => Promise<void>;
+  addOrUpdateOutfit: (outfitData: Omit<Outfit, 'imageUrls'> & { newImageFiles: string[], existingImageUrls: string[] }) => Promise<void>;
   deleteOutfit: (outfit: Outfit) => Promise<void>;
 } | undefined>(undefined);
 
@@ -61,7 +62,7 @@ export const OutfitProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     fetchOutfits();
   }, [user]);
 
-  const addOrUpdateOutfit = useCallback(async (outfitData: Omit<Outfit, 'imageUrls'> & { newImageFiles: File[], existingImageUrls: string[] }) => {
+  const addOrUpdateOutfit = useCallback(async (outfitData: Omit<Outfit, 'imageUrls'> & { newImageFiles: string[], existingImageUrls: string[] }) => {
     if (!user) throw new Error("Cannot add/update outfit: User not authenticated");
 
     try {

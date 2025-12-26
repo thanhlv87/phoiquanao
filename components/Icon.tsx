@@ -2,7 +2,7 @@
 import React from 'react';
 
 interface IconProps extends React.SVGProps<SVGSVGElement> {
-  name: 'home' | 'calendar' | 'plus' | 'camera' | 'back' | 'chevron-left' | 'chevron-right' | 'search' | 'google' | 'logout' | 'sparkles' | 'mail' | 'lock' | 'collections' | 'mix' | 'trash' | 'chart-bar' | 'closet';
+  name: 'home' | 'calendar' | 'plus' | 'camera' | 'back' | 'chevron-left' | 'chevron-right' | 'search' | 'google' | 'logout' | 'sparkles' | 'mail' | 'lock' | 'collections' | 'mix' | 'trash' | 'chart-bar' | 'closet' | 'check';
 }
 
 export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
@@ -139,6 +139,12 @@ export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
                 <line x1="12" y1="20" x2="12" y2="10" />
                 <line x1="18" y1="20" x2="18" y2="4" />
                 <line x1="6" y1="20" x2="6" y2="16" />
+            </svg>
+        );
+    case 'check':
+        return (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                <polyline points="20 6 9 17 4 12" />
             </svg>
         );
     default:

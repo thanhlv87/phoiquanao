@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOutfits } from '../hooks/useOutfits';
 import { useTagSuggestions } from '../hooks/useTagSuggestions';
-import { fileToBase64 } from '../utils/imageUtils';
 import { generateTagsFromImage } from '../services/geminiService';
 import { parseDateString, formatDate } from '../utils/dateUtils';
 import { Icon } from '../components/Icon';
@@ -117,7 +116,8 @@ export const AddOutfitScreen: React.FC = () => {
 
   const [id, setId] = useState<string>('');
   const [images, setImages] = useState<string[]>([]);
-  const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
+  // Store new images as base64 strings
+  const [newImageFiles, setNewImageFiles] = useState<string[]>([]);
   const [tops, setTops] = useState<string[]>([]);
   const [bottoms, setBottoms] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
@@ -159,6 +159,7 @@ export const AddOutfitScreen: React.FC = () => {
         const compressedFiles = await Promise.all(
           files.map((file: File) => compressImage(file, { maxWidth: 1080, quality: 0.7 }))
         );
+        // compressedFiles is string[], matching the state type
         setNewImageFiles(prev => [...prev, ...compressedFiles]);
       } catch (err) {
         console.error("Failed to compress images:", err);
@@ -176,16 +177,16 @@ export const AddOutfitScreen: React.FC = () => {
   };
 
   const handleGenerateTags = async () => {
-    const firstImage = images[0] || (newImageFiles[0] ? URL.createObjectURL(newImageFiles[0]) : null);
+    // newImageFiles[0] is already a base64 string
+    const firstImage = images[0] || newImageFiles[0] || null;
+    
     if (!firstImage) {
       setError("Vui lòng chọn hình ảnh trước.");
       return;
     }
 
-    let base64Image = firstImage;
-    if (newImageFiles[0]) {
-      base64Image = await fileToBase64(newImageFiles[0]);
-    }
+    // It's already base64 string
+    const base64Image = firstImage;
     
     setIsGenerating(true);
     setError(null);
@@ -222,7 +223,7 @@ export const AddOutfitScreen: React.FC = () => {
       id,
       date: new Date().toISOString(),
       dateId,
-      newImageFiles,
+      newImageFiles, // Passed as string[]
       existingImageUrls: images,
       tops,
       bottoms,
@@ -275,7 +276,8 @@ export const AddOutfitScreen: React.FC = () => {
 
   const allImages = useMemo(() => [
     ...images.map(url => ({ type: 'existing', src: url })),
-    ...newImageFiles.map(file => ({ type: 'new', src: URL.createObjectURL(file) }))
+    // No need for URL.createObjectURL since files are already base64 strings
+    ...newImageFiles.map(fileStr => ({ type: 'new', src: fileStr }))
   ], [images, newImageFiles]);
 
   return (
@@ -301,10 +303,10 @@ export const AddOutfitScreen: React.FC = () => {
 
         <div className="grid grid-cols-3 gap-3 mb-6">
             {allImages.map(({ type, src }, index) => (
-                <div key={src} className="relative group aspect-square">
+                <div key={index} className="relative group aspect-square">
                     <img src={src} alt="Outfit" className="w-full h-full object-cover rounded-2xl shadow-sm border border-white" />
                     <button
-                        onClick={() => removeImage(type === 'existing' ? images.findIndex(s => s === src) : newImageFiles.findIndex(f => URL.createObjectURL(f) === src), type as 'existing' | 'new')}
+                        onClick={() => removeImage(type === 'existing' ? images.findIndex(s => s === src) : newImageFiles.findIndex(f => f === src), type as 'existing' | 'new')}
                         className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-lg"
                     >
                         &times;

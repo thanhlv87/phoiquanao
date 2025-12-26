@@ -49,10 +49,10 @@ export const getOutfits = async (userId: string): Promise<Outfit[]> => {
 export const addOrUpdateOutfit = async (userId: string, outfitData: any): Promise<Outfit> => {
     let updatedImageUrls = [...(outfitData.existingImageUrls || [])];
 
+    // newImageFiles bây giờ được mong đợi là mảng chuỗi Base64 (string[])
     if (outfitData.newImageFiles && outfitData.newImageFiles.length > 0) {
-        const newBase64s = await Promise.all(
-            outfitData.newImageFiles.map((file: File) => fileToBase64(file))
-        );
+        // Chúng ta giả định rằng client đã nén và chuyển thành base64
+        const newBase64s = outfitData.newImageFiles;
         updatedImageUrls = [...updatedImageUrls, ...newBase64s];
     }
 

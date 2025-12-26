@@ -4,21 +4,13 @@ import { AiTags, WardrobeItem } from '../types';
 
 const getAiClient = () => {
   const apiKey = process.env.API_KEY;
-  // Check for undefined, null, or empty string (common with build tool replacements)
   if (!apiKey || apiKey.trim() === "") return null;
   return new GoogleGenAI({ apiKey });
 };
 
-// Hàm xử lý đầu vào ảnh: Ưu tiên Base64 có sẵn từ Firestore
 const getRawBase64 = async (input: string): Promise<string> => {
   if (!input) return "";
-  
-  // 1. Nếu là Base64 chuẩn (data:image...) -> Dữ liệu từ Firestore sẽ rơi vào đây
-  if (input.startsWith('data:')) {
-    return input.split(',')[1];
-  }
-
-  // 2. Nếu là URL (Dữ liệu cũ hoặc link ngoài)
+  if (input.startsWith('data:')) return input.split(',')[1];
   if (input.startsWith('http')) {
      try {
         const response = await fetch(input);
@@ -30,12 +22,10 @@ const getRawBase64 = async (input: string): Promise<string> => {
             reader.readAsDataURL(blob);
         });
      } catch (e) {
-         console.warn("Không thể tải ảnh từ URL (có thể do CORS):", input);
+         console.warn("Không thể tải ảnh từ URL:", input);
          return ""; 
      }
   }
-
-  // 3. Raw base64 string
   return input;
 };
 
@@ -74,9 +64,8 @@ export const generateMixImage = async (
     topInput: string, 
     bottomInput: string
 ): Promise<string> => {
-    // Sử dụng helper getAiClient để kiểm tra key trước khi khởi tạo
     const ai = getAiClient();
-    if (!ai) throw new Error("Chưa cấu hình API Key. Vui lòng kiểm tra file .env");
+    if (!ai) throw new Error("Chưa cấu hình API Key.");
 
     try {
         const [modelB64, topB64, bottomB64] = await Promise.all([
@@ -86,7 +75,7 @@ export const generateMixImage = async (
         ]);
 
         if (!modelB64 || !topB64 || !bottomB64) {
-             throw new Error("Không thể tải dữ liệu ảnh. Vui lòng đảm bảo bạn đang sử dụng ảnh mới (đã lưu vào Firestore).");
+             throw new Error("Không thể tải dữ liệu ảnh.");
         }
 
         const response = await ai.models.generateContent({
@@ -112,9 +101,8 @@ export const generateMixImage = async (
         }
         throw new Error("AI không trả về kết quả hình ảnh.");
     } catch (error: any) {
-        console.error("Mix Image error details:", error);
-        if (error.message) throw error;
-        throw new Error("Lỗi không xác định khi phối đồ.");
+        console.error("Mix Image error:", error);
+        throw error;
     }
 };
 
@@ -130,7 +118,7 @@ export const analyzeWardrobeItem = async (imageInput: string): Promise<Partial<W
     contents: {
       parts: [
         { inlineData: { mimeType: 'image/jpeg', data: rawB64 } },
-        { text: "Classify fashion item. Return JSON: category ('top', 'bottom', 'skirt', 'dress'), tags (array), color, material." }
+        { text: "Classify fashion item. Return JSON: category ('top', 'bottom', 'skirt', 'dress', 'shoe', 'accessory'), tags (array), color, material." }
       ]
     },
     config: {
@@ -138,7 +126,7 @@ export const analyzeWardrobeItem = async (imageInput: string): Promise<Partial<W
       responseSchema: {
         type: Type.OBJECT,
         properties: {
-          category: { type: Type.STRING, enum: ['top', 'bottom', 'skirt', 'dress'] },
+          category: { type: Type.STRING, enum: ['top', 'bottom', 'skirt', 'dress', 'shoe', 'accessory'] },
           tags: { type: Type.ARRAY, items: { type: Type.STRING } },
           color: { type: Type.STRING },
           material: { type: Type.STRING }

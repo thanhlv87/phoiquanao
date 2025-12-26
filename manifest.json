@@ -1,0 +1,22 @@
+
+{
+  "name": "AI Fashion Mix",
+  "short_name": "FashionMix",
+  "description": "Smart AI Fashion Diary and Virtual Try-On",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/thanhlv87/pic/refs/heads/main/fashion.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/thanhlv87/pic/refs/heads/main/fashion.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

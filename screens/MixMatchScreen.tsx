@@ -8,7 +8,6 @@ import { MixResult, WardrobeItem } from '../types';
 import { getDefaultModel, saveDefaultModel, getWardrobe } from '../services/firebaseService';
 import { compressImage } from '../utils/imageCompression';
 
-// --- Modal Component ---
 const DeleteConfirmModal: React.FC<{ 
     onClose: () => void; 
     onConfirm: () => void;
@@ -19,18 +18,18 @@ const DeleteConfirmModal: React.FC<{
                 <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
                     <Icon name="trash" className="w-10 h-10 text-red-500" />
                 </div>
-                <h3 className="text-xl font-black text-slate-800 text-center mb-2 uppercase tracking-tight">Xóa ảnh này?</h3>
+                <h3 className="text-xl font-bold text-slate-800 text-center mb-2 uppercase tracking-tight">Xóa ảnh này?</h3>
                 <p className="text-slate-500 text-sm text-center mb-8 font-medium">Ảnh phối đồ sẽ bị xóa vĩnh viễn và không thể khôi phục.</p>
                 <div className="flex flex-col gap-3">
                     <button 
                         onClick={onConfirm}
-                        className="w-full bg-red-500 text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-all"
+                        className="w-full bg-red-500 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all"
                     >
                         XÓA NGAY
                     </button>
                     <button 
                         onClick={onClose}
-                        className="w-full bg-slate-100 text-slate-500 font-black py-4 rounded-2xl active:scale-95 transition-all"
+                        className="w-full bg-slate-100 text-slate-500 font-bold py-4 rounded-2xl active:scale-95 transition-all"
                     >
                         BỎ QUA
                     </button>
@@ -48,30 +47,36 @@ const ClosetPicker: React.FC<{
     category: string;
 }> = ({ isOpen, onClose, items, onSelect, category }) => {
     if (!isOpen) return null;
-    const filteredItems = items.filter(i => category === 'top' ? i.category === 'top' : (i.category === 'bottom' || i.category === 'skirt' || i.category === 'dress'));
+    
+    // Lọc đồ theo loại: Áo (top), Quần/Váy/Đầm (bottom/skirt/dress), hoặc Giày/Phụ kiện
+    const filteredItems = items.filter(i => {
+        if (category === 'top') return i.category === 'top';
+        if (category === 'bottom') return ['bottom', 'skirt', 'dress'].includes(i.category);
+        return i.category === category;
+    });
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-end animate-fade-in" onClick={onClose}>
             <div className="bg-white w-full rounded-t-[40px] max-h-[80vh] overflow-y-auto p-6 animate-slide-up" onClick={e => e.stopPropagation()}>
                 <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6" />
-                <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-2 uppercase tracking-tight">
+                <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2 uppercase tracking-tight">
                     <Icon name="closet" className="text-indigo-600" />
                     {category === 'top' ? 'Chọn Áo' : 'Chọn Quần/Váy'}
                 </h3>
                 {filteredItems.length === 0 ? (
-                    <div className="text-center py-20 text-slate-400 font-bold uppercase text-[10px]">
-                        Tủ đồ chưa có món này.
+                    <div className="text-center py-20 text-slate-400 font-black uppercase text-[10px] tracking-widest leading-loose">
+                        Tủ đồ chưa có món này.<br/>Hãy thêm vào mục Tủ Đồ.
                     </div>
                 ) : (
                     <div className="grid grid-cols-3 gap-4">
                         {filteredItems.map(item => (
-                            <div key={item.id} onClick={() => { onSelect(item); onClose(); }} className="aspect-[3/4] bg-slate-50 rounded-2xl overflow-hidden border-2 border-transparent hover:border-indigo-500 transition-all cursor-pointer relative">
+                            <div key={item.id} onClick={() => { onSelect(item); onClose(); }} className="aspect-[3/4] bg-slate-50 rounded-2xl overflow-hidden border-2 border-transparent hover:border-indigo-500 transition-all cursor-pointer relative p-2 flex items-center justify-center">
                                 <img src={item.imageUrl} className="w-full h-full object-contain" alt="item" />
                             </div>
                         ))}
                     </div>
                 )}
-                <button onClick={onClose} className="w-full mt-8 bg-slate-100 text-slate-600 font-black py-4 rounded-2xl uppercase text-xs">Đóng</button>
+                <button onClick={onClose} className="w-full mt-8 bg-slate-100 text-slate-600 font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest">Đóng</button>
             </div>
         </div>
     );
@@ -90,8 +95,6 @@ export const MixMatchScreen: React.FC = () => {
     const [stylistReason, setStylistReason] = useState<string | null>(null);
     const [pickerConfig, setPickerConfig] = useState<{ isOpen: boolean, category: 'top' | 'bottom' }>({ isOpen: false, category: 'top' });
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
-    
-    // State cho Modal xóa
     const [mixToDelete, setMixToDelete] = useState<MixResult | null>(null);
 
     const modelInputRef = useRef<HTMLInputElement>(null);
@@ -130,7 +133,6 @@ export const MixMatchScreen: React.FC = () => {
             const res = await generateMixImage(modelImage, topImage, bottomImage);
             setResultImage(res);
             if (user) {
-                // Upload sẽ chạy ngầm
                 await addMix(modelImage, topImage, bottomImage, res);
             }
         } catch (e: any) { 
@@ -161,12 +163,11 @@ export const MixMatchScreen: React.FC = () => {
         finally { setIsGenerating(false); }
     };
 
-    // Hàm thực hiện xóa sau khi Confirm từ Modal
     const executeDeleteMix = async () => {
         if (!mixToDelete) return;
         try {
             await deleteMix(mixToDelete.id, mixToDelete.resultImageUrl);
-            setMixToDelete(null); // Đóng modal
+            setMixToDelete(null);
         } catch (e) {
             console.error(e);
             setErrorMsg("Không thể xóa ảnh. Vui lòng thử lại.");
@@ -191,7 +192,6 @@ export const MixMatchScreen: React.FC = () => {
                 onSelect={(item) => pickerConfig.category === 'top' ? setTopImage(item.imageUrl) : setBottomImage(item.imageUrl)}
             />
 
-            {/* Modal Xóa */}
             {mixToDelete && (
                 <DeleteConfirmModal 
                     onClose={() => setMixToDelete(null)} 
@@ -202,18 +202,18 @@ export const MixMatchScreen: React.FC = () => {
             <input type="file" ref={modelInputRef} onChange={handleModelChange} className="hidden" accept="image/*" />
 
             <header className="mb-8">
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight uppercase italic">AI Stylist</h1>
-                <p className="text-slate-500 font-bold text-xs">Mặc thử trang phục bằng công nghệ Vision</p>
+                <h1 className="text-3xl font-bold text-slate-900 tracking-tight uppercase italic">AI Stylist</h1>
+                <p className="text-slate-500 font-semibold text-xs uppercase">Mặc thử trang phục Vision</p>
             </header>
 
             <div className="flex gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">
-                <button onClick={() => handleSmartSuggest("Đi chơi cuối tuần")} className="whitespace-nowrap bg-white border border-slate-200 px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-700 shadow-sm">🎲 Ngẫu hứng</button>
-                <button onClick={() => handleSmartSuggest("Phong cách thanh lịch đi làm")} className="whitespace-nowrap bg-white border border-slate-200 px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-700 shadow-sm">💼 Công sở</button>
+                <button onClick={() => handleSmartSuggest("Đi chơi cuối tuần")} className="whitespace-nowrap bg-white border border-slate-200 px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest text-slate-700 shadow-sm">🎲 Ngẫu hứng</button>
+                <button onClick={() => handleSmartSuggest("Phong cách thanh lịch đi làm")} className="whitespace-nowrap bg-white border border-slate-200 px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest text-slate-700 shadow-sm">💼 Công sở</button>
             </div>
 
             {stylistReason && (
                 <div className="bg-indigo-600 p-5 rounded-[2rem] mb-10 shadow-xl animate-scale-up">
-                    <p className="text-white text-[11px] font-bold italic leading-relaxed leading-snug">"{stylistReason}"</p>
+                    <p className="text-white text-[11px] font-medium italic leading-relaxed">"{stylistReason}"</p>
                 </div>
             )}
             
@@ -237,14 +237,14 @@ export const MixMatchScreen: React.FC = () => {
                 </div>
 
                 <div className="flex flex-col gap-3">
-                    <div onClick={() => setPickerConfig({ isOpen: true, category: 'top' })} className="w-full aspect-[3/4] rounded-[2rem] border-2 border-dashed border-slate-300 flex items-center justify-center bg-white overflow-hidden shadow-inner">
+                    <div onClick={() => setPickerConfig({ isOpen: true, category: 'top' })} className="w-full aspect-[3/4] rounded-[2rem] border-2 border-dashed border-slate-300 flex items-center justify-center bg-white overflow-hidden shadow-inner p-2">
                         {topImage ? <img src={topImage} className="w-full h-full object-contain" alt="top" /> : <Icon name="plus" className="text-slate-300 w-8 h-8" />}
                     </div>
                     <span className="text-[9px] font-black uppercase text-center text-slate-400">Áo</span>
                 </div>
 
                 <div className="flex flex-col gap-3">
-                    <div onClick={() => setPickerConfig({ isOpen: true, category: 'bottom' })} className="w-full aspect-[3/4] rounded-[2rem] border-2 border-dashed border-slate-300 flex items-center justify-center bg-white overflow-hidden shadow-inner">
+                    <div onClick={() => setPickerConfig({ isOpen: true, category: 'bottom' })} className="w-full aspect-[3/4] rounded-[2rem] border-2 border-dashed border-slate-300 flex items-center justify-center bg-white overflow-hidden shadow-inner p-2">
                         {bottomImage ? <img src={bottomImage} className="w-full h-full object-contain" alt="bottom" /> : <Icon name="plus" className="text-slate-300 w-8 h-8" />}
                     </div>
                     <span className="text-[9px] font-black uppercase text-center text-slate-400">Quần/Váy</span>
@@ -254,9 +254,9 @@ export const MixMatchScreen: React.FC = () => {
             <button 
                 onClick={handleGenerate} 
                 disabled={isGenerating || !modelImage || !topImage || !bottomImage} 
-                className={`w-full font-black py-6 rounded-[2.5rem] shadow-2xl transition-all uppercase tracking-widest text-xs ${isGenerating ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white active:scale-95'}`}
+                className={`w-full font-bold py-6 rounded-[2.5rem] shadow-2xl transition-all uppercase tracking-widest text-xs ${isGenerating ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white active:scale-95'}`}
             >
-                {isGenerating ? "AI ĐANG THỬ ĐỒ VÀ LƯU LẠI..." : "BẮT ĐẦU PHỐI ĐỒ"}
+                {isGenerating ? "AI ĐANG THỬ ĐỒ..." : "BẮT ĐẦU PHỐI ĐỒ"}
             </button>
 
             {resultImage && (
@@ -268,16 +268,15 @@ export const MixMatchScreen: React.FC = () => {
                 </div>
             )}
 
-            {/* History Section */}
             {mixState.mixes.length > 0 && (
                 <div className="mt-12">
                      <div className="flex items-center gap-2 mb-6 px-2">
                         <Icon name="mix" className="text-slate-400 w-4 h-4" />
-                        <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Lịch sử phối đồ</h3>
+                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lịch sử phối đồ</h3>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         {mixState.mixes.map(mix => (
-                            <div key={mix.id} className="group relative bg-white p-2 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-lg transition-all">
+                            <div key={mix.id} className="group relative bg-white p-2.5 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-lg transition-all">
                                 <div onClick={() => handleHistoryClick(mix)} className="aspect-[3/4] bg-slate-50 rounded-[1.5rem] overflow-hidden cursor-pointer">
                                     <img src={mix.resultImageUrl} className="w-full h-full object-cover" alt="History" />
                                 </div>

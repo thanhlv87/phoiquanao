@@ -11,11 +11,11 @@ const NavItem: React.FC<{ to: string; icon: 'home' | 'calendar' | 'search' | 'co
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `flex flex-col items-center justify-center w-full pt-2 pb-1 transition-all ${isActive ? activeClass + ' scale-110' : inactiveClass}`
+        `flex flex-col items-center justify-center w-full pt-2 pb-1 transition-all ${isActive ? activeClass + ' scale-105' : inactiveClass}`
       }
     >
       <Icon name={icon as any} className="w-6 h-6 mb-1" />
-      <span className="text-[10px] font-bold uppercase tracking-tighter">{label}</span>
+      <span className="text-[10px] font-semibold uppercase tracking-tight">{label}</span>
     </NavLink>
   );
 };

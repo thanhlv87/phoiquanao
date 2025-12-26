@@ -12,7 +12,7 @@ export interface Outfit {
 
 export interface WardrobeItem {
   id: string;
-  category: 'top' | 'bottom' | 'skirt' | 'dress';
+  category: 'top' | 'bottom' | 'skirt' | 'dress' | 'shoe' | 'accessory';
   imageUrl: string;
   tags: string[];
   color?: string;

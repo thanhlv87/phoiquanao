@@ -1,13 +1,152 @@
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOutfits } from '../hooks/useOutfits';
 import { useAuth } from '../hooks/useAuth';
 import { getTodayDateString } from '../utils/dateUtils';
-import { getMostFrequentTags } from '../utils/outfitUtils';
-import { generateOutfitSuggestion } from '../services/geminiService';
+import { fetchLocalWeather, WeatherData } from '../services/weatherService';
+import { suggestWeatherOutfit } from '../services/geminiService';
+import { getWardrobe } from '../services/firebaseService';
 import { Icon } from '../components/Icon';
-import { Outfit } from '../types';
+import { Outfit, WardrobeItem } from '../types';
+
+const WeatherWidget: React.FC<{ weather: WeatherData | null; loading: boolean }> = ({ weather, loading }) => {
+  if (loading) {
+    return (
+      <div className="bg-white/80 backdrop-blur-md rounded-[2.2rem] p-5 mb-8 flex items-center justify-between shadow-sm border border-white/50 animate-pulse">
+        <div className="flex items-center gap-4">
+          <div className="w-11 h-11 bg-slate-100 rounded-2xl"></div>
+          <div className="space-y-2">
+            <div className="w-20 h-2 bg-slate-100 rounded"></div>
+            <div className="w-32 h-3 bg-slate-100 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!weather) return null;
+
+  return (
+    <div className="bg-white/95 backdrop-blur-md rounded-[2.2rem] p-5 mb-8 flex items-center justify-between shadow-sm border border-white/50 animate-fade-in">
+      <div className="flex items-center gap-4 min-w-0">
+        <div className="w-11 h-11 bg-indigo-50 rounded-2xl flex items-center justify-center text-xl shadow-inner flex-shrink-0">
+          {weather.isRaining ? '🌧️' : weather.temp > 28 ? '☀️' : '☁️'}
+        </div>
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <Icon name="search" className="w-3 h-3 text-indigo-500" strokeWidth="2.5" />
+            <p className="text-[10px] font-black uppercase text-indigo-600 tracking-wider truncate">{weather.city}</p>
+          </div>
+          <p className="text-sm font-bold text-slate-800 leading-tight truncate">{weather.condition}</p>
+        </div>
+      </div>
+      <div className="text-right flex-shrink-0 ml-4">
+        <p className="text-2xl font-black text-slate-900 leading-none mb-1">{weather.temp}°</p>
+        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Hiện tại</p>
+      </div>
+    </div>
+  );
+};
+
+const WeatherSuggestionCard: React.FC<{ 
+  weather: WeatherData | null; 
+}> = ({ weather }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [suggestion, setSuggestion] = useState<{ top: WardrobeItem; bottom: WardrobeItem; reason: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [emptyWardrobe, setEmptyWardrobe] = useState(false);
+
+  const getRecommendation = async () => {
+    if (!user || !weather) return;
+    setLoading(true);
+    setEmptyWardrobe(false);
+    try {
+      const wardrobe = await getWardrobe(user.uid);
+      
+      const hasTops = wardrobe.some(i => i.category === 'top');
+      const hasBottoms = wardrobe.some(i => ['bottom', 'skirt', 'dress'].includes(i.category));
+      
+      if (!hasTops || !hasBottoms) {
+        setEmptyWardrobe(true);
+        setLoading(false);
+        return;
+      }
+      
+      const res = await suggestWeatherOutfit(wardrobe, weather);
+      const top = wardrobe.find(w => w.id === res.topId);
+      const bottom = wardrobe.find(w => w.id === res.bottomId);
+      
+      if (top && bottom) {
+        setSuggestion({ top, bottom, reason: res.reason });
+      } else {
+        // Fallback: pick first of each if AI fails to return valid IDs
+        const firstTop = wardrobe.find(i => i.category === 'top');
+        const firstBottom = wardrobe.find(i => ['bottom', 'skirt', 'dress'].includes(i.category));
+        if (firstTop && firstBottom) {
+          setSuggestion({ top: firstTop, bottom: firstBottom, reason: "Hôm nay thời tiết thế này, mặc combo này là chuẩn nhất!" });
+        }
+      }
+    } catch (e) {
+      console.error("AI Suggestion error:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (weather) getRecommendation();
+  }, [weather, user]);
+
+  if (!weather) return null;
+
+  return (
+    <div className="mt-8 mb-4 animate-slide-up">
+      <div className="flex items-center gap-2 mb-4 px-2">
+        <Icon name="sparkles" className="text-indigo-600 w-3.5 h-3.5" />
+        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Gợi ý phối đồ</h2>
+      </div>
+      
+      <div className="bg-white rounded-[2.5rem] p-6 shadow-xl shadow-indigo-100/50 border border-indigo-50 relative overflow-hidden min-h-[160px] flex flex-col justify-center">
+        {loading ? (
+          <div className="flex flex-col items-center py-6">
+            <div className="w-8 h-8 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-3"></div>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Đang xem tủ đồ của bạn...</p>
+          </div>
+        ) : emptyWardrobe ? (
+          <div className="text-center py-4">
+            <p className="text-slate-500 font-bold text-sm mb-4">Tủ đồ còn trống, AI chưa thể gợi ý được.</p>
+            <button 
+              onClick={() => navigate('/closet')}
+              className="bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest py-3 px-8 rounded-xl shadow-lg active:scale-95 transition-all"
+            >
+              Thêm đồ vào tủ
+            </button>
+          </div>
+        ) : suggestion ? (
+          <>
+            <div className="flex gap-4 mb-6">
+              <div className="flex-1 aspect-[3/4] bg-slate-50 rounded-2xl overflow-hidden p-2 flex items-center justify-center border border-slate-100">
+                <img src={suggestion.top.imageUrl} className="w-full h-full object-contain" alt="top" />
+              </div>
+              <div className="flex-1 aspect-[3/4] bg-slate-50 rounded-2xl overflow-hidden p-2 flex items-center justify-center border border-slate-100">
+                <img src={suggestion.bottom.imageUrl} className="w-full h-full object-contain" alt="bottom" />
+              </div>
+            </div>
+            <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
+              <p className="text-[11px] font-medium text-indigo-900 leading-relaxed italic">"{suggestion.reason}"</p>
+            </div>
+          </>
+        ) : (
+          <div className="text-center text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+            Thời tiết này bạn có thể mặc gì cũng đẹp!
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => void }> = ({ outfits, onNavigate }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -29,32 +168,20 @@ const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => 
         }
     };
     
-    if (outfits.length === 1) {
-      const outfit = outfits[0];
-       return (
-        <div onClick={() => onNavigate(outfit.id)} className="bg-white rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105 cursor-pointer">
-          <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full aspect-square object-cover" />
-          <div className="p-4">
-            <div className="flex flex-wrap gap-2">
-              {[...outfit.tops, ...outfit.bottoms, ...outfit.tags].slice(0, 4).map(tag => (
-                <span key={tag} className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">{tag}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-      );
-    }
-    
+    if (outfits.length === 0) return null;
+
     return (
         <div className="relative">
-            <div ref={scrollContainerRef} onScroll={handleScroll} className="flex space-x-4 overflow-x-auto snap-x snap-mandatory pb-2 scrollbar-hide">
+            <div ref={scrollContainerRef} onScroll={handleScroll} className="flex space-x-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-hide px-1">
                 {outfits.map((outfit) => (
-                    <div key={outfit.id} onClick={() => onNavigate(outfit.id)} className="snap-start flex-shrink-0 w-[80%] md:w-[45%] bg-white rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105 cursor-pointer">
-                        <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full aspect-square object-cover" />
-                        <div className="p-3">
-                            <div className="flex flex-wrap gap-1">
+                    <div key={outfit.id} onClick={() => onNavigate(outfit.id)} className="snap-start flex-shrink-0 w-[85%] bg-white rounded-[2.2rem] shadow-lg overflow-hidden transition-all hover:scale-[1.01] cursor-pointer p-2 border border-slate-100">
+                        <div className="aspect-square rounded-[1.8rem] overflow-hidden">
+                          <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="p-4">
+                            <div className="flex flex-wrap gap-1.5">
                                 {[...outfit.tops, ...outfit.bottoms].slice(0, 3).map(tag => (
-                                    <span key={tag} className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full">{tag}</span>
+                                    <span key={tag} className="bg-slate-50 text-slate-500 text-[9px] font-black uppercase px-3 py-1 rounded-full">{tag}</span>
                                 ))}
                             </div>
                         </div>
@@ -62,13 +189,13 @@ const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => 
                 ))}
             </div>
             {showLeftArrow && (
-                <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 shadow-md z-10 hover:bg-white">
-                    <Icon name="chevron-left" className="w-6 h-6 text-gray-700" />
+                <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 rounded-full w-8 h-8 flex items-center justify-center shadow-lg z-10 hover:bg-white text-slate-600">
+                    <Icon name="chevron-left" className="w-4 h-4" />
                 </button>
             )}
-            {showRightArrow && (
-                <button onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 shadow-md z-10 hover:bg-white">
-                    <Icon name="chevron-right" className="w-6 h-6 text-gray-700" />
+            {showRightArrow && outfits.length > 1 && (
+                <button onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 rounded-full w-8 h-8 flex items-center justify-center shadow-lg z-10 hover:bg-white text-slate-600">
+                    <Icon name="chevron-right" className="w-4 h-4" />
                 </button>
             )}
         </div>
@@ -76,40 +203,17 @@ const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => 
 };
 
 const AddOutfitPrompt: React.FC<{ onAdd: () => void }> = ({ onAdd }) => (
-  <div className="bg-white rounded-xl shadow-md p-6 text-center flex flex-col items-center justify-center min-h-[200px] border-2 border-dashed border-gray-300">
-    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-      <Icon name="plus" className="w-8 h-8 text-gray-400" />
+  <div className="bg-white rounded-[2.5rem] shadow-sm p-8 text-center flex flex-col items-center justify-center min-h-[250px] border-2 border-dashed border-slate-200">
+    <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center mb-6">
+      <Icon name="plus" className="w-8 h-8 text-slate-300" />
     </div>
-    <p className="text-gray-500 mb-4">Bạn chưa ghi lại trang phục cho hôm nay.</p>
+    <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest mb-6">Chưa có nhật ký hôm nay</p>
     <button
       onClick={onAdd}
-      className="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300"
+      className="bg-indigo-600 text-white font-black py-4 px-10 rounded-2xl shadow-xl shadow-indigo-100 active:scale-95 transition-all uppercase text-[10px] tracking-widest"
     >
-      Thêm trang phục hôm nay
+      Ghi lại ngay
     </button>
-  </div>
-);
-
-const SignUpPrompt: React.FC = () => {
-    const navigate = useNavigate();
-    return (
-        <div className="bg-white rounded-xl shadow-md p-6 text-center mt-8 border-2 border-dashed border-blue-300">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Lưu lại phong cách của bạn</h3>
-            <p className="text-gray-600 mb-4">Tạo tài khoản để lưu các bộ trang phục và truy cập chúng từ bất kỳ thiết bị nào.</p>
-            <button
-                onClick={() => navigate('/auth')}
-                className="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300"
-            >
-                Đăng ký hoặc Đăng nhập
-            </button>
-        </div>
-    );
-};
-
-
-const LoadingSpinner: React.FC = () => (
-  <div className="flex justify-center items-center p-8">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
   </div>
 );
 
@@ -120,218 +224,132 @@ const FlashbackSection: React.FC<{
   onNavigate: (id: string) => void;
 }> = ({ title, outfits, fallbackMessage, onNavigate }) => {
   return (
-    <div className="mt-8">
-      <h2 className="text-xl font-semibold text-gray-700 mb-3">{title}</h2>
+    <div className="mt-12">
+      <div className="flex items-center gap-2 mb-4 px-2">
+        <Icon name="calendar" className="text-slate-400 w-3.5 h-3.5" />
+        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</h2>
+      </div>
       {outfits.length > 0 ? (
         <OutfitCarousel outfits={outfits} onNavigate={onNavigate} />
       ) : (
-        <div className="bg-white/70 rounded-xl shadow-md p-4 text-center text-sm text-gray-500 border border-dashed">
-          <p>{fallbackMessage}</p>
+        <div className="bg-white/50 rounded-[2rem] p-6 text-center text-[10px] font-bold text-slate-400 border border-dashed border-slate-200 uppercase tracking-tighter">
+          {fallbackMessage}
         </div>
       )}
     </div>
   );
 };
 
-const StyleSuggestion: React.FC = () => {
-  const { state } = useOutfits();
-  const [suggestion, setSuggestion] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const hasEnoughOutfits = useMemo(() => Object.keys(state.allOutfits).length >= 3, [state.allOutfits]);
-
-  const handleGetSuggestion = async () => {
-    setIsLoading(true);
-    setError('');
-    setSuggestion('');
-    try {
-      const frequentTags = getMostFrequentTags(Object.values(state.allOutfits), 10);
-      if(frequentTags.length === 0) {
-        frequentTags.push('casual', 'comfortable');
-      }
-      const result = await generateOutfitSuggestion(frequentTags);
-      setSuggestion(result);
-    } catch (e) {
-      setError('Không thể nhận được gợi ý. Vui lòng thử lại.');
-      console.error(e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (!hasEnoughOutfits) {
-    return (
-        <div className="bg-white/70 rounded-xl shadow-md p-4 text-center text-sm text-gray-500 mt-8 border border-dashed">
-            Ghi lại ít nhất 3 bộ trang phục để mở khóa gợi ý phong cách cá nhân từ AI!
-        </div>
-    );
-  }
-
-  return (
-    <div className="mt-8">
-      <h2 className="text-xl font-semibold text-gray-700 mb-3">Cần thêm cảm hứng?</h2>
-      <div className="bg-white rounded-xl shadow-md p-6 border-2 border-dashed border-transparent">
-        {suggestion && !isLoading && (
-          <p className="text-gray-700 text-center italic">"{suggestion}"</p>
-        )}
-        {isLoading && (
-          <div className="flex justify-center items-center">
-             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
-        )}
-        {error && <p className="text-red-500 text-center">{error}</p>}
-        
-        <div className="text-center mt-4">
-            <button
-              onClick={handleGetSuggestion}
-              disabled={isLoading}
-              className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold py-2 px-5 rounded-lg shadow-md hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 disabled:opacity-50 flex items-center gap-2 mx-auto"
-            >
-              <Icon name="sparkles" className="w-5 h-5" />
-              <span>{suggestion ? 'Nhận ý tưởng khác' : 'Nhận gợi ý phong cách'}</span>
-            </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-
 export const HomeScreen: React.FC = () => {
   const navigate = useNavigate();
   const { state } = useOutfits();
   const { user, logout } = useAuth();
-  const { outfitsByDate, loading, error } = state;
+  const { outfitsByDate, loading: outfitsLoading } = state;
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
+
+  useEffect(() => {
+    setWeatherLoading(true);
+    fetchLocalWeather().then(data => {
+      setWeather(data);
+      setWeatherLoading(false);
+    });
+  }, []);
 
   const todayId = getTodayDateString();
   const todaysOutfits = outfitsByDate[todayId] || [];
 
   const outfitsFromLastWeek = useMemo(() => {
-    if (loading || !outfitsByDate) return [];
-    
-    const today = new Date();
-    const lastWeekDate = new Date();
-    lastWeekDate.setDate(today.getDate() - 7);
-    
-    const year = lastWeekDate.getFullYear();
-    const month = String(lastWeekDate.getMonth() + 1).padStart(2, '0');
-    const day = String(lastWeekDate.getDate()).padStart(2, '0');
-    
-    const lastWeekId = `${year}-${month}-${day}`;
-    
-    return outfitsByDate[lastWeekId] || [];
-  }, [outfitsByDate, loading]);
+    if (outfitsLoading || !outfitsByDate) return [];
+    const date = new Date();
+    date.setDate(date.getDate() - 7);
+    const dateId = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return outfitsByDate[dateId] || [];
+  }, [outfitsByDate, outfitsLoading]);
 
   const outfitsFromLastMonth = useMemo(() => {
-    if (loading || !outfitsByDate) return [];
-    const lastMonthDate = new Date();
-    lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
-    
-    const year = lastMonthDate.getFullYear();
-    const month = String(lastMonthDate.getMonth() + 1).padStart(2, '0');
-    const day = String(lastMonthDate.getDate()).padStart(2, '0');
-    
-    const lastMonthId = `${year}-${month}-${day}`;
-    return outfitsByDate[lastMonthId] || [];
-  }, [outfitsByDate, loading]);
+    if (outfitsLoading || !outfitsByDate) return [];
+    const date = new Date();
+    date.setMonth(date.getMonth() - 1);
+    const dateId = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return outfitsByDate[dateId] || [];
+  }, [outfitsByDate, outfitsLoading]);
 
-  const outfitsFromLastYear = useMemo(() => {
-    if (loading || !outfitsByDate) return [];
-    const lastYearDate = new Date();
-    lastYearDate.setFullYear(lastYearDate.getFullYear() - 1);
-
-    const year = lastYearDate.getFullYear();
-    const month = String(lastYearDate.getMonth() + 1).padStart(2, '0');
-    const day = String(lastYearDate.getDate()).padStart(2, '0');
-    
-    const lastYearId = `${year}-${month}-${day}`;
-    return outfitsByDate[lastYearId] || [];
-  }, [outfitsByDate, loading]);
-
-  const handleAddOutfit = () => {
-    navigate(`/add-outfit/${todayId}`);
-  };
-  
-  const handleEditOutfit = (outfitId: string) => {
-    navigate(`/outfit/${outfitId}`);
-  };
-
-  const greetingName = user && !user.isAnonymous ? (user.displayName?.split(' ')[0] || user.email) : '';
-
-  // Tính toán lời chào dựa trên giờ hiện tại
-  const timeBasedGreeting = useMemo(() => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return "Chào buổi sáng";
-    if (hour >= 12 && hour < 18) return "Chào buổi chiều";
+  const timeGreeting = useMemo(() => {
+    const hr = new Date().getHours();
+    if (hr < 12) return "Chào buổi sáng";
+    if (hr < 18) return "Chào buổi chiều";
     return "Chào buổi tối";
   }, []);
 
+  const greetingName = user && !user.isAnonymous ? (user.displayName?.split(' ')[0] || user.email?.split('@')[0]) : 'Bạn';
+
   return (
-    <div className="p-4 md:p-6 pb-20">
-      <header className="mb-6">
-        <div className="flex justify-between items-start">
-            <div>
-                <h1 className="text-3xl font-bold text-gray-800">{timeBasedGreeting}{greetingName ? `, ${greetingName}` : ''}</h1>
-                <p className="text-gray-500">Hôm nay bạn mặc gì?</p>
-            </div>
-            <div className="flex items-center gap-2">
-                <button
-                    onClick={() => navigate('/search')}
-                    className="flex items-center gap-2 text-gray-600 font-semibold p-2 rounded-full hover:bg-gray-100 transition-colors"
-                    title="Tìm kiếm"
-                >
-                    <Icon name="search" className="w-6 h-6" />
-                </button>
-                {user && !user.isAnonymous && (
-                    <button
-                        onClick={logout}
-                        className="flex items-center gap-2 text-gray-600 font-semibold p-2 rounded-full hover:bg-red-100 hover:text-red-600 transition-colors"
-                        title="Đăng xuất"
-                    >
-                        <Icon name="logout" className="w-6 h-6" />
-                    </button>
-                )}
-            </div>
+    <div className="p-4 md:p-6 pb-24 min-h-screen bg-slate-50">
+      <header className="flex justify-between items-start mb-8">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 flex-shrink-0 animate-scale-up">
+            <img 
+              src="https://raw.githubusercontent.com/thanhlv87/pic/refs/heads/main/fashion.png" 
+              alt="Logo" 
+              className="w-full h-full object-contain drop-shadow-md"
+            />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-0.5">{timeGreeting},</h1>
+            <p className="text-slate-500 font-bold text-base">{greetingName} ✨</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => navigate('/search')} className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm text-slate-600 active:scale-90 transition-all border border-slate-100">
+            <Icon name="search" className="w-4 h-4" />
+          </button>
+          {user && !user.isAnonymous && (
+            <button onClick={logout} className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm text-red-500 active:scale-90 transition-all border border-slate-100">
+              <Icon name="logout" className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </header>
-      <main>
-        <h2 className="text-xl font-semibold text-gray-700 mb-3">Trang phục hôm nay</h2>
-        {loading && <LoadingSpinner />}
-        {error && <p className="text-red-500 text-center">Không thể tải trang phục. Vui lòng thử lại sau.</p>}
-        {!loading && !error && (
-            todaysOutfits.length > 0 ? (
-              <OutfitCarousel outfits={todaysOutfits} onNavigate={handleEditOutfit} />
-            ) : (
-              <AddOutfitPrompt onAdd={handleAddOutfit} />
-            )
-        )}
+
+      <WeatherWidget weather={weather} loading={weatherLoading} />
+
+      <main className="animate-fade-in">
+        <div className="flex items-center gap-2 mb-4 px-2">
+          <Icon name="home" className="text-indigo-600 w-3.5 h-3.5" />
+          <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Trang phục hôm nay</h2>
+        </div>
         
-        {!loading && !error && (
+        {outfitsLoading ? (
+          <div className="flex justify-center items-center py-20 opacity-50">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : (
+          todaysOutfits.length > 0 ? (
+            <OutfitCarousel outfits={todaysOutfits} onNavigate={(id) => navigate(`/outfit/${id}`)} />
+          ) : (
+            <AddOutfitPrompt onAdd={() => navigate(`/add-outfit/${todayId}`)} />
+          )
+        )}
+
+        <WeatherSuggestionCard weather={weather} />
+        
+        {!outfitsLoading && (
           <>
             <FlashbackSection
-                title="Tuần trước vào ngày này..."
-                outfits={outfitsFromLastWeek}
-                fallbackMessage="Chưa có dữ liệu cho tuần trước. Hãy tiếp tục ghi lại để xem lại nhé!"
-                onNavigate={handleEditOutfit}
+              title="Tuần trước vào ngày này"
+              outfits={outfitsFromLastWeek}
+              fallbackMessage="Chưa có dữ liệu tuần trước"
+              onNavigate={(id) => navigate(`/outfit/${id}`)}
             />
             <FlashbackSection
-                title="Tháng trước vào ngày này..."
-                outfits={outfitsFromLastMonth}
-                fallbackMessage="Tháng trước bạn chưa ghi lại gì vào ngày này. Cùng tạo ký ức cho tháng sau nhé!"
-                onNavigate={handleEditOutfit}
-            />
-            <FlashbackSection
-                title="Năm trước vào ngày này..."
-                outfits={outfitsFromLastYear}
-                fallbackMessage="Một năm trôi qua nhanh thật! Hãy bắt đầu lưu lại những khoảnh khắc thời trang của bạn từ hôm nay."
-                onNavigate={handleEditOutfit}
+              title="Tháng trước vào ngày này"
+              outfits={outfitsFromLastMonth}
+              fallbackMessage="Chưa có dữ liệu tháng trước"
+              onNavigate={(id) => navigate(`/outfit/${id}`)}
             />
           </>
         )}
-        
-        {(!user || user.isAnonymous) && !loading && <SignUpPrompt />}
-        {!loading && !error && <StyleSuggestion />}
       </main>
     </div>
   );

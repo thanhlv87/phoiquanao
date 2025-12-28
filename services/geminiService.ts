@@ -1,6 +1,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { AiTags, WardrobeItem } from '../types';
+import { WeatherData } from './weatherService';
 
 const getAiClient = () => {
   const apiKey = process.env.API_KEY;
@@ -138,19 +139,20 @@ export const analyzeWardrobeItem = async (imageInput: string): Promise<Partial<W
   return JSON.parse(response.text || "{}");
 };
 
+// Fix: Implemented generateTagsFromImage to resolve the compilation error in AddOutfitScreen.tsx
 export const generateTagsFromImage = async (imageInput: string): Promise<AiTags> => {
   const ai = getAiClient();
-  if (!ai) return { tops: [], bottoms: [], general: [] };
+  if (!ai) throw new Error("Chưa cấu hình API Key.");
   
   const rawB64 = await getRawBase64(imageInput);
-  if (!rawB64) return { tops: [], bottoms: [], general: [] };
+  if (!rawB64) throw new Error("Lỗi dữ liệu ảnh phân tích.");
 
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: {
       parts: [
         { inlineData: { mimeType: 'image/jpeg', data: rawB64 } },
-        { text: "Extract fashion tags. JSON: tops, bottoms, general." }
+        { text: "Analyze the clothing in the image. Return JSON: tops (array of tags), bottoms (array of tags), general (array of overall style tags)." }
       ]
     },
     config: {
@@ -161,6 +163,42 @@ export const generateTagsFromImage = async (imageInput: string): Promise<AiTags>
           tops: { type: Type.ARRAY, items: { type: Type.STRING } },
           bottoms: { type: Type.ARRAY, items: { type: Type.STRING } },
           general: { type: Type.ARRAY, items: { type: Type.STRING } }
+        },
+        required: ["tops", "bottoms", "general"]
+      }
+    }
+  });
+
+  try {
+    return JSON.parse(response.text || '{"tops":[],"bottoms":[],"general":[]}');
+  } catch (e) {
+    console.error("Failed to parse tags:", e);
+    return { tops: [], bottoms: [], general: [] };
+  }
+};
+
+export const suggestWeatherOutfit = async (wardrobe: WardrobeItem[], weather: WeatherData) => {
+  const ai = getAiClient();
+  if (!ai) return { topId: '', bottomId: '', reason: 'No API Key' };
+
+  const prompt = `
+    Dữ liệu tủ đồ: ${JSON.stringify(wardrobe.map(i => ({id: i.id, cat: i.category, tags: i.tags, color: i.color})))}
+    Thời tiết hiện tại: ${weather.temp}°C, ${weather.condition}. ${weather.isRaining ? "Có khả năng mưa." : "Không mưa."}
+    Nhiệm vụ: Chọn 1 áo (top) và 1 quần/váy (bottom/skirt/dress) phù hợp nhất với thời tiết này. 
+    Trả về JSON với: topId, bottomId, reason (lời khuyên tiếng Việt ngắn gọn, tinh tế).
+  `;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          topId: { type: Type.STRING },
+          bottomId: { type: Type.STRING },
+          reason: { type: Type.STRING }
         }
       }
     }

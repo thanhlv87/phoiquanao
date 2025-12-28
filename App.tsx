@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { HomeScreen } from './screens/HomeScreen';
 import { CalendarScreen } from './screens/CalendarScreen';
 import { AddOutfitScreen } from './screens/AddOutfitScreen';
@@ -13,10 +13,9 @@ import { StatisticsScreen } from './screens/StatisticsScreen';
 import { ClosetScreen } from './screens/ClosetScreen';
 import { BottomNav } from './components/BottomNav';
 import { OutfitProvider } from './hooks/useOutfits';
-import { AuthProvider } from './hooks/useAuth';
+import { AuthProvider, useAuth } from './hooks/useAuth';
 import { CollectionProvider } from './hooks/useCollections';
 import { MixProvider } from './hooks/useMixes';
-import { Icon } from './components/Icon';
 
 const OfflineBanner: React.FC = () => {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -44,18 +43,42 @@ const OfflineBanner: React.FC = () => {
   );
 };
 
-function App() {
+const AuthenticatedLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, loading } = useAuth();
   const location = useLocation();
-  const showNav = location.pathname !== '/auth';
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-white">
+        <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">Đang kiểm tra bảo mật...</p>
+      </div>
+    );
+  }
+
+  if (!user && location.pathname !== '/auth') {
+    return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+};
+
+function AppContent() {
+  const location = useLocation();
+  const { user } = useAuth();
+  const isAuthPage = location.pathname === '/auth';
+  const showNav = !isAuthPage && user;
 
   return (
-    <AuthProvider>
-      <CollectionProvider>
-        <OutfitProvider>
-          <MixProvider>
-            <div className="max-w-lg mx-auto bg-slate-50 min-h-screen font-sans shadow-2xl relative">
-              <OfflineBanner />
-              <main className={showNav ? "pb-20" : ""}>
+    <div className="max-w-lg mx-auto bg-slate-50 min-h-screen font-sans shadow-2xl relative">
+      <OfflineBanner />
+      <main className={showNav ? "pb-24" : ""}>
+        <Routes>
+          <Route path="/auth" element={<AuthScreen />} />
+          <Route
+            path="/*"
+            element={
+              <AuthenticatedLayout>
                 <Routes>
                   <Route path="/" element={<HomeScreen />} />
                   <Route path="/calendar" element={<CalendarScreen />} />
@@ -67,11 +90,25 @@ function App() {
                   <Route path="/closet" element={<ClosetScreen />} />
                   <Route path="/add-outfit/:date" element={<AddOutfitScreen />} />
                   <Route path="/outfit/:outfitId" element={<AddOutfitScreen />} />
-                  <Route path="/auth" element={<AuthScreen />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
-              </main>
-              {showNav && <BottomNav />}
-            </div>
+              </AuthenticatedLayout>
+            }
+          />
+        </Routes>
+      </main>
+      {showNav && <BottomNav />}
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <CollectionProvider>
+        <OutfitProvider>
+          <MixProvider>
+            <AppContent />
           </MixProvider>
         </OutfitProvider>
       </CollectionProvider>

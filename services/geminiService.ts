@@ -83,13 +83,13 @@ export const generateMixImage = async (
             model: 'gemini-2.5-flash-image',
             contents: {
                 parts: [
-                    { text: 'Model Image:' },
+                    { text: 'Ảnh người mẫu:' },
                     { inlineData: { mimeType: 'image/jpeg', data: modelB64 } },
-                    { text: 'Clothing Top:' },
+                    { text: 'Ảnh áo:' },
                     { inlineData: { mimeType: 'image/jpeg', data: topB64 } },
-                    { text: 'Clothing Bottom:' },
+                    { text: 'Ảnh quần/váy:' },
                     { inlineData: { mimeType: 'image/jpeg', data: bottomB64 } },
-                    { text: 'Virtual Try-On Task: Realisticly dress the person in the Model Image with the Clothing Top and Clothing Bottom. Maintain the original pose, lighting, and background. Ensure high realism.' },
+                    { text: 'Nhiệm vụ: Mặc áo và quần/váy này lên người mẫu một cách chân thực nhất. Giữ nguyên tư thế, ánh sáng và phông nền của ảnh người mẫu ban đầu.' },
                 ],
             },
             config: { imageConfig: { aspectRatio: "3:4" } }
@@ -119,7 +119,7 @@ export const analyzeWardrobeItem = async (imageInput: string): Promise<Partial<W
     contents: {
       parts: [
         { inlineData: { mimeType: 'image/jpeg', data: rawB64 } },
-        { text: "Classify fashion item. Return JSON: category ('top', 'bottom', 'skirt', 'dress', 'shoe', 'accessory'), tags (array), color, material." }
+        { text: "Phân loại món đồ thời trang này. Trả về JSON với các trường: category ('top', 'bottom', 'skirt', 'dress', 'shoe', 'accessory'), tags (mảng các tag bằng tiếng Việt), color (tên màu bằng tiếng Việt), material (tên chất liệu bằng tiếng Việt). Lưu ý: Toàn bộ nội dung text phải là tiếng Việt." }
       ]
     },
     config: {
@@ -139,7 +139,6 @@ export const analyzeWardrobeItem = async (imageInput: string): Promise<Partial<W
   return JSON.parse(response.text || "{}");
 };
 
-// Fix: Implemented generateTagsFromImage to resolve the compilation error in AddOutfitScreen.tsx
 export const generateTagsFromImage = async (imageInput: string): Promise<AiTags> => {
   const ai = getAiClient();
   if (!ai) throw new Error("Chưa cấu hình API Key.");
@@ -152,7 +151,7 @@ export const generateTagsFromImage = async (imageInput: string): Promise<AiTags>
     contents: {
       parts: [
         { inlineData: { mimeType: 'image/jpeg', data: rawB64 } },
-        { text: "Analyze the clothing in the image. Return JSON: tops (array of tags), bottoms (array of tags), general (array of overall style tags)." }
+        { text: "Phân tích trang phục trong ảnh. Trả về JSON: tops (mảng các tag cho phần áo bằng tiếng Việt), bottoms (mảng các tag cho phần quần/váy bằng tiếng Việt), general (mảng các tag phong cách chung bằng tiếng Việt). Toàn bộ tag phải là tiếng Việt." }
       ]
     },
     config: {
@@ -209,7 +208,7 @@ export const suggestWeatherOutfit = async (wardrobe: WardrobeItem[], weather: We
 export const suggestComboFromWardrobe = async (wardrobe: WardrobeItem[], request: string) => {
     const ai = getAiClient();
     if (!ai) return { topId: '', bottomId: '', reason: 'No API Key' };
-    const prompt = `Wardrobe: ${JSON.stringify(wardrobe.map(i => ({id: i.id, cat: i.category, tags: i.tags})))}. User context: ${request}. Pick 1 top and 1 bottom ID. JSON {topId, bottomId, reason}.`;
+    const prompt = `Tủ đồ: ${JSON.stringify(wardrobe.map(i => ({id: i.id, cat: i.category, tags: i.tags})))}. Yêu cầu người dùng: ${request}. Chọn 1 áo (top) và 1 quần/váy (bottom) phù hợp. Trả về JSON {topId, bottomId, reason}. Lưu ý: Lý do (reason) phải bằng tiếng Việt.`;
     const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
@@ -233,7 +232,7 @@ export const generateOutfitSuggestion = async (tags: string[]): Promise<string> 
     if (!ai) return "";
     const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: `Suggestion for: ${tags.join(', ')}`,
+        contents: `Gợi ý phối đồ cho các món có tag: ${tags.join(', ')}. Hãy trả lời bằng tiếng Việt ngắn gọn.`,
     });
     return response.text || "";
 };

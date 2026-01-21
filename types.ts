@@ -8,6 +8,8 @@ export interface Outfit {
   bottoms: string[];
   tags: string[];
   collectionIds?: string[];
+  temperature?: number;
+  weatherCondition?: string;
 }
 
 export interface WardrobeItem {

@@ -5,10 +5,8 @@ import { useOutfits } from '../hooks/useOutfits';
 import { useAuth } from '../hooks/useAuth';
 import { getTodayDateString } from '../utils/dateUtils';
 import { fetchLocalWeather, WeatherData } from '../services/weatherService';
-import { suggestWeatherOutfit } from '../services/geminiService';
-import { getWardrobe } from '../services/firebaseService';
 import { Icon } from '../components/Icon';
-import { Outfit, WardrobeItem } from '../types';
+import { Outfit } from '../types';
 
 const WeatherWidget: React.FC<{ weather: WeatherData | null; loading: boolean }> = ({ weather, loading }) => {
   if (loading) {
@@ -49,105 +47,6 @@ const WeatherWidget: React.FC<{ weather: WeatherData | null; loading: boolean }>
   );
 };
 
-const WeatherSuggestionCard: React.FC<{ 
-  weather: WeatherData | null; 
-}> = ({ weather }) => {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [suggestion, setSuggestion] = useState<{ top: WardrobeItem; bottom: WardrobeItem; reason: string } | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [emptyWardrobe, setEmptyWardrobe] = useState(false);
-
-  const getRecommendation = async () => {
-    if (!user || !weather) return;
-    setLoading(true);
-    setEmptyWardrobe(false);
-    try {
-      const wardrobe = await getWardrobe(user.uid);
-      
-      const hasTops = wardrobe.some(i => i.category === 'top');
-      const hasBottoms = wardrobe.some(i => ['bottom', 'skirt', 'dress'].includes(i.category));
-      
-      if (!hasTops || !hasBottoms) {
-        setEmptyWardrobe(true);
-        setLoading(false);
-        return;
-      }
-      
-      const res = await suggestWeatherOutfit(wardrobe, weather);
-      const top = wardrobe.find(w => w.id === res.topId);
-      const bottom = wardrobe.find(w => w.id === res.bottomId);
-      
-      if (top && bottom) {
-        setSuggestion({ top, bottom, reason: res.reason });
-      } else {
-        // Fallback: pick first of each if AI fails to return valid IDs
-        const firstTop = wardrobe.find(i => i.category === 'top');
-        const firstBottom = wardrobe.find(i => ['bottom', 'skirt', 'dress'].includes(i.category));
-        if (firstTop && firstBottom) {
-          setSuggestion({ top: firstTop, bottom: firstBottom, reason: "Hôm nay thời tiết thế này, mặc combo này là chuẩn nhất!" });
-        }
-      }
-    } catch (e) {
-      console.error("AI Suggestion error:", e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (weather) getRecommendation();
-  }, [weather, user]);
-
-  if (!weather) return null;
-
-  return (
-    <div className="mt-8 mb-4 animate-slide-up">
-      <div className="flex items-center gap-2 mb-4 px-2">
-        <Icon name="sparkles" className="text-indigo-600 w-3.5 h-3.5" />
-        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Gợi ý phối đồ</h2>
-      </div>
-      
-      <div className="bg-white rounded-[2.5rem] p-6 shadow-xl shadow-indigo-100/50 border border-indigo-50 relative overflow-hidden min-h-[160px] flex flex-col justify-center">
-        {loading ? (
-          <div className="flex flex-col items-center py-6">
-            <div className="w-8 h-8 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-3"></div>
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Đang xem tủ đồ của bạn...</p>
-          </div>
-        ) : emptyWardrobe ? (
-          <div className="text-center py-4">
-            <p className="text-slate-500 font-bold text-sm mb-4">Tủ đồ còn trống, AI chưa thể gợi ý được.</p>
-            <button 
-              onClick={() => navigate('/closet')}
-              className="bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest py-3 px-8 rounded-xl shadow-lg active:scale-95 transition-all"
-            >
-              Thêm đồ vào tủ
-            </button>
-          </div>
-        ) : suggestion ? (
-          <>
-            <div className="flex gap-4 mb-6">
-              <div className="flex-1 aspect-[3/4] bg-slate-50 rounded-2xl overflow-hidden p-2 flex items-center justify-center border border-slate-100">
-                <img src={suggestion.top.imageUrl} className="w-full h-full object-contain" alt="top" />
-              </div>
-              <div className="flex-1 aspect-[3/4] bg-slate-50 rounded-2xl overflow-hidden p-2 flex items-center justify-center border border-slate-100">
-                <img src={suggestion.bottom.imageUrl} className="w-full h-full object-contain" alt="bottom" />
-              </div>
-            </div>
-            <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
-              <p className="text-[11px] font-medium text-indigo-900 leading-relaxed italic">"{suggestion.reason}"</p>
-            </div>
-          </>
-        ) : (
-          <div className="text-center text-slate-400 text-[10px] font-bold uppercase tracking-widest">
-            Thời tiết này bạn có thể mặc gì cũng đẹp!
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
 const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => void }> = ({ outfits, onNavigate }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -175,8 +74,13 @@ const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => 
             <div ref={scrollContainerRef} onScroll={handleScroll} className="flex space-x-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-hide px-1">
                 {outfits.map((outfit) => (
                     <div key={outfit.id} onClick={() => onNavigate(outfit.id)} className="snap-start flex-shrink-0 w-[85%] bg-white rounded-[2.2rem] shadow-lg overflow-hidden transition-all hover:scale-[1.01] cursor-pointer p-2 border border-slate-100">
-                        <div className="aspect-square rounded-[1.8rem] overflow-hidden">
+                        <div className="aspect-square rounded-[1.8rem] overflow-hidden relative">
                           <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full h-full object-cover" />
+                          {outfit.temperature !== undefined && (
+                              <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-2 py-1 rounded-xl shadow-sm border border-white/50">
+                                  <p className="text-[10px] font-black text-slate-800 leading-none">{outfit.temperature}°C</p>
+                              </div>
+                          )}
                         </div>
                         <div className="p-4">
                             <div className="flex flex-wrap gap-1.5">
@@ -331,8 +235,6 @@ export const HomeScreen: React.FC = () => {
             <AddOutfitPrompt onAdd={() => navigate(`/add-outfit/${todayId}`)} />
           )
         )}
-
-        <WeatherSuggestionCard weather={weather} />
         
         {!outfitsLoading && (
           <>

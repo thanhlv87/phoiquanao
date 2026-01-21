@@ -4,7 +4,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useOutfits } from '../hooks/useOutfits';
 import { useTagSuggestions } from '../hooks/useTagSuggestions';
 import { generateTagsFromImage } from '../services/geminiService';
-import { parseDateString, formatDate } from '../utils/dateUtils';
+import { fetchLocalWeather } from '../services/weatherService';
+import { parseDateString, formatDate, getTodayDateString } from '../utils/dateUtils';
 import { Icon } from '../components/Icon';
 import { AiTags, Outfit } from '../types';
 import { compressImage } from '../utils/imageCompression';
@@ -41,7 +42,6 @@ const DeleteConfirmModal: React.FC<{
     );
 };
 
-// A reusable component for handling tag inputs
 const TagInputSection: React.FC<{
   title: string;
   tags: string[];
@@ -116,18 +116,20 @@ export const AddOutfitScreen: React.FC = () => {
 
   const [id, setId] = useState<string>('');
   const [images, setImages] = useState<string[]>([]);
-  // Store new images as base64 strings
   const [newImageFiles, setNewImageFiles] = useState<string[]>([]);
   const [tops, setTops] = useState<string[]>([]);
   const [bottoms, setBottoms] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
+  
+  // Weather states
+  const [temp, setTemp] = useState<number | undefined>(undefined);
+  const [condition, setCondition] = useState<string | undefined>(undefined);
   
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // State for Modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const isEditMode = !!outfitId;
@@ -148,8 +150,21 @@ export const AddOutfitScreen: React.FC = () => {
       setTops(existingOutfit.tops);
       setBottoms(existingOutfit.bottoms);
       setTags(existingOutfit.tags);
+      setTemp(existingOutfit.temperature);
+      setCondition(existingOutfit.weatherCondition);
+    } else {
+      // Auto-fetch weather for new entries if date is today
+      const todayStr = getTodayDateString();
+      if (dateParam === todayStr || !dateParam) {
+        fetchLocalWeather().then(weather => {
+          if (weather) {
+            setTemp(weather.temp);
+            setCondition(weather.condition);
+          }
+        });
+      }
     }
-  }, [existingOutfit, isEditMode]);
+  }, [existingOutfit, isEditMode, dateParam]);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -159,7 +174,6 @@ export const AddOutfitScreen: React.FC = () => {
         const compressedFiles = await Promise.all(
           files.map((file: File) => compressImage(file, { maxWidth: 1080, quality: 0.7 }))
         );
-        // compressedFiles is string[], matching the state type
         setNewImageFiles(prev => [...prev, ...compressedFiles]);
       } catch (err) {
         console.error("Failed to compress images:", err);
@@ -177,21 +191,16 @@ export const AddOutfitScreen: React.FC = () => {
   };
 
   const handleGenerateTags = async () => {
-    // newImageFiles[0] is already a base64 string
     const firstImage = images[0] || newImageFiles[0] || null;
-    
     if (!firstImage) {
       setError("Vui lòng chọn hình ảnh trước.");
       return;
     }
 
-    // It's already base64 string
-    const base64Image = firstImage;
-    
     setIsGenerating(true);
     setError(null);
     try {
-      const aiTags: AiTags = await generateTagsFromImage(base64Image);
+      const aiTags: AiTags = await generateTagsFromImage(firstImage);
       setTops(prev => [...new Set([...prev, ...aiTags.tops])]);
       setBottoms(prev => [...new Set([...prev, ...aiTags.bottoms])]);
       setTags(prev => [...new Set([...prev, ...aiTags.general])]);
@@ -223,11 +232,13 @@ export const AddOutfitScreen: React.FC = () => {
       id,
       date: new Date().toISOString(),
       dateId,
-      newImageFiles, // Passed as string[]
+      newImageFiles,
       existingImageUrls: images,
       tops,
       bottoms,
       tags,
+      temperature: temp,
+      weatherCondition: condition
     };
 
     try {
@@ -243,16 +254,13 @@ export const AddOutfitScreen: React.FC = () => {
     }
   };
   
-  // Trigger modal display
   const handleDeleteClick = () => {
     if (!isEditMode || !existingOutfit) return;
     setShowDeleteModal(true);
   };
 
-  // Perform actual delete logic
   const confirmDelete = async () => {
     if (!isEditMode || !existingOutfit) return;
-    
     setIsDeleting(true);
     setError(null);
     try {
@@ -276,13 +284,11 @@ export const AddOutfitScreen: React.FC = () => {
 
   const allImages = useMemo(() => [
     ...images.map(url => ({ type: 'existing', src: url })),
-    // No need for URL.createObjectURL since files are already base64 strings
     ...newImageFiles.map(fileStr => ({ type: 'new', src: fileStr }))
   ], [images, newImageFiles]);
 
   return (
     <div className="p-4 md:p-6 pb-20 bg-slate-50 min-h-screen">
-      {/* Modal Xóa */}
       {showDeleteModal && (
           <DeleteConfirmModal 
               onClose={() => setShowDeleteModal(false)} 
@@ -294,7 +300,14 @@ export const AddOutfitScreen: React.FC = () => {
         <button onClick={() => navigate(-1)} className="p-2 rounded-2xl bg-white shadow-sm border border-slate-100 active:scale-90 transition-all">
           <Icon name="back" className="w-5 h-5 text-slate-700" />
         </button>
-        <h1 className="text-xl font-black text-slate-800 tracking-tight">{formatDate(date)}</h1>
+        <div className="text-center">
+            <h1 className="text-xl font-black text-slate-800 tracking-tight leading-tight">{formatDate(date)}</h1>
+            {temp !== undefined && (
+                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-0.5">
+                    {temp}°C {condition ? `• ${condition}` : ''}
+                </p>
+            )}
+        </div>
         <div className="w-10"></div>
       </header>
 

@@ -1,11 +1,12 @@
+
 import { useState, useEffect, useCallback } from 'react';
 
 const STORAGE_KEY = 'outfit_logger_custom_tags';
 
 const initialSuggestions = {
-    tops: ['Áo phông', 'Sơ mi', 'Áo hoodie', 'Áo khoác', 'Áo len'],
-    bottoms: ['Quần jeans', 'Quần tây', 'Quần short', 'Chân váy'],
-    tags: ['Thường ngày', 'Trang trọng', 'Công sở', 'Tiệc tùng'],
+    tops: ['Áo phông', 'Áo sơ mi', 'Áo hoodie', 'Áo khoác', 'Áo len', 'Áo hai dây', 'Áo blazer'],
+    bottoms: ['Quần jeans', 'Quần tây', 'Quần short', 'Chân váy ngắn', 'Chân váy dài', 'Quần kaki'],
+    tags: ['Thường ngày', 'Trang trọng', 'Công sở', 'Tiệc tùng', 'Thể thao', 'Hẹn hò'],
 };
 
 type TagCategory = keyof typeof initialSuggestions;

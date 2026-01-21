@@ -34,6 +34,11 @@ const OutfitDetailModal: React.FC<{ outfit: Outfit; onClose: () => void; onUpdat
                         <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full aspect-square object-cover" />
                     )}
                     <button onClick={onClose} className="absolute top-4 right-4 bg-white/90 text-slate-900 rounded-full w-10 h-10 flex items-center justify-center text-xl shadow-lg">&times;</button>
+                    {outfit.temperature !== undefined && (
+                        <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-2xl text-xs font-black shadow-lg">
+                            🌡️ {outfit.temperature}°C {outfit.weatherCondition ? `• ${outfit.weatherCondition}` : ''}
+                        </div>
+                    )}
                 </div>
 
                 <div className="p-6 overflow-y-auto">
@@ -102,8 +107,13 @@ const OutfitPreview: React.FC<{
                 <div className="grid grid-cols-2 gap-4">
                     {outfits.map(outfit => (
                         <div key={outfit.id} onClick={() => onSelectOutfit(outfit)} className="bg-white p-2 rounded-[2rem] shadow-sm border border-slate-50 cursor-pointer hover:shadow-xl transition-all active:scale-95">
-                            <div className="aspect-square bg-slate-100 rounded-[1.5rem] overflow-hidden mb-2">
+                            <div className="aspect-square bg-slate-100 rounded-[1.5rem] overflow-hidden mb-2 relative">
                                 <img src={outfit.imageUrls[0]} alt="Preview" className="w-full h-full object-cover" />
+                                {outfit.temperature !== undefined && (
+                                    <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white px-1.5 py-0.5 rounded-lg text-[8px] font-black">
+                                        {outfit.temperature}°C
+                                    </div>
+                                )}
                             </div>
                             <div className="px-2 pb-1">
                                 <p className="text-[10px] font-black uppercase text-indigo-600 truncate">{outfit.tops[0] || 'Phối đồ'}</p>

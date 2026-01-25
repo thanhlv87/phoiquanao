@@ -1,6 +1,6 @@
 {
-  "name": "AI Fashion Mix",
-  "description": "Ứng dụng nhật ký thời trang thông minh. Lưu trữ trang phục, xem lịch sử, nhận gợi ý từ AI và đặc biệt là tính năng 'Phối đồ ảo' giúp bạn thử trang phục mới ngay lập tức.",
+  "name": "Outfit Log",
+  "description": "Ứng dụng nhật ký thời trang tối giản. Lưu trữ trang phục hàng ngày, xem lịch sử phối đồ theo thời tiết và quản lý phong cách cá nhân một cách nhanh chóng.",
   "requestFramePermissions": [
     "camera",
     "geolocation"

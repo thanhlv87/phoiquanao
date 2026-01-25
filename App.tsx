@@ -5,17 +5,32 @@ import { HomeScreen } from './screens/HomeScreen';
 import { CalendarScreen } from './screens/CalendarScreen';
 import { AddOutfitScreen } from './screens/AddOutfitScreen';
 import { AuthScreen } from './screens/AuthScreen';
-import { SearchScreen } from './screens/SearchScreen';
 import { CollectionsScreen } from './screens/CollectionsScreen';
 import { CollectionDetailScreen } from './screens/CollectionDetailScreen';
-import { MixMatchScreen } from './screens/MixMatchScreen';
-import { StatisticsScreen } from './screens/StatisticsScreen';
-import { ClosetScreen } from './screens/ClosetScreen';
 import { BottomNav } from './components/BottomNav';
 import { OutfitProvider } from './hooks/useOutfits';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { CollectionProvider } from './hooks/useCollections';
-import { MixProvider } from './hooks/useMixes';
+
+const HomeSkeleton: React.FC = () => (
+  <div className="p-4 md:p-6 min-h-screen bg-slate-50 animate-pulse">
+    <div className="flex justify-between items-center mb-8 pt-8">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-slate-200 rounded-2xl"></div>
+        <div className="space-y-2">
+          <div className="w-24 h-4 bg-slate-200 rounded"></div>
+          <div className="w-16 h-3 bg-slate-200 rounded"></div>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <div className="w-10 h-10 bg-slate-200 rounded-2xl"></div>
+      </div>
+    </div>
+    <div className="w-full h-24 bg-slate-200 rounded-[2.2rem] mb-8"></div>
+    <div className="w-32 h-3 bg-slate-200 rounded mb-4"></div>
+    <div className="w-full aspect-[4/5] bg-slate-200 rounded-[2.2rem]"></div>
+  </div>
+);
 
 const OfflineBanner: React.FC = () => {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -23,10 +38,8 @@ const OfflineBanner: React.FC = () => {
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -38,7 +51,7 @@ const OfflineBanner: React.FC = () => {
   return (
     <div className="fixed top-0 left-0 right-0 z-[100] bg-red-500 text-white text-[10px] font-black uppercase py-2 px-4 flex items-center justify-center gap-2 animate-fade-in shadow-lg">
       <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-      CHẾ ĐỘ NGOẠI TUYẾN - MỘT SỐ TÍNH NĂNG AI SẼ TẠM NGỪNG
+      CHẾ ĐỘ NGOẠI TUYẾN
     </div>
   );
 };
@@ -48,12 +61,7 @@ const AuthenticatedLayout: React.FC<{ children: React.ReactNode }> = ({ children
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-white">
-        <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">Đang kiểm tra bảo mật...</p>
-      </div>
-    );
+    return <HomeSkeleton />;
   }
 
   if (!user && location.pathname !== '/auth') {
@@ -82,12 +90,8 @@ function AppContent() {
                 <Routes>
                   <Route path="/" element={<HomeScreen />} />
                   <Route path="/calendar" element={<CalendarScreen />} />
-                  <Route path="/search" element={<SearchScreen />} />
                   <Route path="/collections" element={<CollectionsScreen />} />
                   <Route path="/collection/:collectionId" element={<CollectionDetailScreen />} />
-                  <Route path="/mix" element={<MixMatchScreen />} />
-                  <Route path="/stats" element={<StatisticsScreen />} />
-                  <Route path="/closet" element={<ClosetScreen />} />
                   <Route path="/add-outfit/:date" element={<AddOutfitScreen />} />
                   <Route path="/outfit/:outfitId" element={<AddOutfitScreen />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
@@ -107,9 +111,7 @@ function App() {
     <AuthProvider>
       <CollectionProvider>
         <OutfitProvider>
-          <MixProvider>
-            <AppContent />
-          </MixProvider>
+          <AppContent />
         </OutfitProvider>
       </CollectionProvider>
     </AuthProvider>

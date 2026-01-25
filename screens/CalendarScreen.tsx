@@ -12,7 +12,6 @@ const monthNames = [
 ];
 const dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
-// --- Modal Component ---
 const OutfitDetailModal: React.FC<{ outfit: Outfit; onClose: () => void; onUpdate: (id: string) => void }> = ({ outfit, onClose, onUpdate }) => {
     return (
         <div 
@@ -75,7 +74,6 @@ const OutfitDetailModal: React.FC<{ outfit: Outfit; onClose: () => void; onUpdat
     );
 };
 
-// --- Preview Pane Component ---
 const OutfitPreview: React.FC<{
     dateId: string | null;
     outfits: Outfit[];
@@ -197,9 +195,8 @@ export const CalendarScreen: React.FC = () => {
         />
       )}
       
-      <header className="p-6 bg-white rounded-b-[40px] shadow-sm">
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-6">Nhật Ký Thời Gian</h1>
-        <div className="flex justify-between items-center px-2">
+      <header className="p-6 bg-white rounded-b-[40px] shadow-sm pt-14">
+        <div className="flex justify-between items-center px-2 mb-2">
           <button onClick={handlePrevMonth} className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors">
             <Icon name="chevron-left" className="w-5 h-5 text-slate-600" />
           </button>

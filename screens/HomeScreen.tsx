@@ -9,22 +9,12 @@ import { Icon } from '../components/Icon';
 import { Outfit } from '../types';
 
 const WeatherWidget: React.FC<{ weather: WeatherData | null; loading: boolean }> = ({ weather, loading }) => {
-  if (loading) {
+  if (loading && !weather) {
     return (
-      <div className="bg-white/80 backdrop-blur-md rounded-[2.2rem] p-5 mb-8 flex items-center justify-between shadow-sm border border-white/50 animate-pulse">
-        <div className="flex items-center gap-4">
-          <div className="w-11 h-11 bg-slate-100 rounded-2xl"></div>
-          <div className="space-y-2">
-            <div className="w-20 h-2 bg-slate-100 rounded"></div>
-            <div className="w-32 h-3 bg-slate-100 rounded"></div>
-          </div>
-        </div>
-      </div>
+      <div className="bg-white/80 backdrop-blur-md rounded-[2.2rem] p-5 mb-8 h-24 shadow-sm border border-white/50 animate-pulse"></div>
     );
   }
-
   if (!weather) return null;
-
   return (
     <div className="bg-white/95 backdrop-blur-md rounded-[2.2rem] p-5 mb-8 flex items-center justify-between shadow-sm border border-white/50 animate-fade-in">
       <div className="flex items-center gap-4 min-w-0">
@@ -164,20 +154,20 @@ export const HomeScreen: React.FC = () => {
   const todaysOutfits = outfitsByDate[todayId] || [];
 
   const outfitsFromLastWeek = useMemo(() => {
-    if (outfitsLoading || !outfitsByDate) return [];
+    if (!outfitsByDate) return [];
     const date = new Date();
     date.setDate(date.getDate() - 7);
     const dateId = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     return outfitsByDate[dateId] || [];
-  }, [outfitsByDate, outfitsLoading]);
+  }, [outfitsByDate]);
 
   const outfitsFromLastMonth = useMemo(() => {
-    if (outfitsLoading || !outfitsByDate) return [];
+    if (!outfitsByDate) return [];
     const date = new Date();
     date.setMonth(date.getMonth() - 1);
     const dateId = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     return outfitsByDate[dateId] || [];
-  }, [outfitsByDate, outfitsLoading]);
+  }, [outfitsByDate]);
 
   const timeGreeting = useMemo(() => {
     const hr = new Date().getHours();
@@ -188,8 +178,18 @@ export const HomeScreen: React.FC = () => {
 
   const greetingName = user && !user.isAnonymous ? (user.displayName?.split(' ')[0] || user.email?.split('@')[0]) : 'Bạn';
 
+  if (outfitsLoading && Object.keys(outfitsByDate).length === 0) {
+      return (
+          <div className="p-4 md:p-6 pb-24 min-h-screen bg-slate-50 pt-12">
+              <div className="h-12 w-48 bg-slate-200 rounded mb-8 animate-pulse"></div>
+              <div className="h-24 w-full bg-slate-200 rounded-[2.2rem] mb-8 animate-pulse"></div>
+              <div className="h-[400px] w-full bg-slate-200 rounded-[2.2rem] animate-pulse"></div>
+          </div>
+      );
+  }
+
   return (
-    <div className="p-4 md:p-6 pb-24 min-h-screen bg-slate-50">
+    <div className="p-4 md:p-6 pb-24 min-h-screen bg-slate-50 pt-12">
       <header className="flex justify-between items-start mb-8">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 flex-shrink-0 animate-scale-up">
@@ -205,9 +205,6 @@ export const HomeScreen: React.FC = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => navigate('/search')} className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm text-slate-600 active:scale-90 transition-all border border-slate-100">
-            <Icon name="search" className="w-4 h-4" />
-          </button>
           {user && !user.isAnonymous && (
             <button onClick={logout} className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm text-red-500 active:scale-90 transition-all border border-slate-100">
               <Icon name="logout" className="w-4 h-4" />
@@ -224,34 +221,24 @@ export const HomeScreen: React.FC = () => {
           <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Trang phục hôm nay</h2>
         </div>
         
-        {outfitsLoading ? (
-          <div className="flex justify-center items-center py-20 opacity-50">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-          </div>
+        {todaysOutfits.length > 0 ? (
+          <OutfitCarousel outfits={todaysOutfits} onNavigate={(id) => navigate(`/outfit/${id}`)} />
         ) : (
-          todaysOutfits.length > 0 ? (
-            <OutfitCarousel outfits={todaysOutfits} onNavigate={(id) => navigate(`/outfit/${id}`)} />
-          ) : (
-            <AddOutfitPrompt onAdd={() => navigate(`/add-outfit/${todayId}`)} />
-          )
+          <AddOutfitPrompt onAdd={() => navigate(`/add-outfit/${todayId}`)} />
         )}
         
-        {!outfitsLoading && (
-          <>
-            <FlashbackSection
-              title="Tuần trước vào ngày này"
-              outfits={outfitsFromLastWeek}
-              fallbackMessage="Chưa có dữ liệu tuần trước"
-              onNavigate={(id) => navigate(`/outfit/${id}`)}
-            />
-            <FlashbackSection
-              title="Tháng trước vào ngày này"
-              outfits={outfitsFromLastMonth}
-              fallbackMessage="Chưa có dữ liệu tháng trước"
-              onNavigate={(id) => navigate(`/outfit/${id}`)}
-            />
-          </>
-        )}
+        <FlashbackSection
+          title="Tuần trước vào ngày này"
+          outfits={outfitsFromLastWeek}
+          fallbackMessage="Chưa có dữ liệu tuần trước"
+          onNavigate={(id) => navigate(`/outfit/${id}`)}
+        />
+        <FlashbackSection
+          title="Tháng trước vào ngày này"
+          outfits={outfitsFromLastMonth}
+          fallbackMessage="Chưa có dữ liệu tháng trước"
+          onNavigate={(id) => navigate(`/outfit/${id}`)}
+        />
       </main>
     </div>
   );

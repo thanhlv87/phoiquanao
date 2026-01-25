@@ -1,13 +1,9 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import { AiTags, WardrobeItem } from '../types';
-import { WeatherData } from './weatherService';
 
-const getAiClient = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey || apiKey.trim() === "") return null;
-  return new GoogleGenAI({ apiKey });
-};
+// Sử dụng helper để luôn khởi tạo client mới với API KEY từ môi trường
+const getAi = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const getRawBase64 = async (input: string): Promise<string> => {
   if (!input) return "";
@@ -30,119 +26,8 @@ const getRawBase64 = async (input: string): Promise<string> => {
   return input;
 };
 
-export const isolateClothingItem = async (imageInput: string, category: string): Promise<string> => {
-  const ai = getAiClient();
-  if (!ai) throw new Error("Chưa cấu hình API Key.");
-
-  try {
-    const rawB64 = await getRawBase64(imageInput);
-    if (!rawB64) throw new Error("Dữ liệu ảnh không hợp lệ.");
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: {
-        parts: [
-          { inlineData: { mimeType: 'image/jpeg', data: rawB64 } },
-          { text: `Isolate the ${category} in this image. Remove background. Return only the object on white background.` },
-        ],
-      },
-    });
-
-    if (response.candidates?.[0]?.content?.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) return `data:image/jpeg;base64,${part.inlineData.data}`;
-      }
-    }
-    return imageInput;
-  } catch (error) {
-    console.error("Isolation failed:", error);
-    return imageInput;
-  }
-};
-
-export const generateMixImage = async (
-    modelInput: string, 
-    topInput: string, 
-    bottomInput: string
-): Promise<string> => {
-    const ai = getAiClient();
-    if (!ai) throw new Error("Chưa cấu hình API Key.");
-
-    try {
-        const [modelB64, topB64, bottomB64] = await Promise.all([
-            getRawBase64(modelInput),
-            getRawBase64(topInput),
-            getRawBase64(bottomInput)
-        ]);
-
-        if (!modelB64 || !topB64 || !bottomB64) {
-             throw new Error("Không thể tải dữ liệu ảnh.");
-        }
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image',
-            contents: {
-                parts: [
-                    { text: 'Ảnh người mẫu:' },
-                    { inlineData: { mimeType: 'image/jpeg', data: modelB64 } },
-                    { text: 'Ảnh áo:' },
-                    { inlineData: { mimeType: 'image/jpeg', data: topB64 } },
-                    { text: 'Ảnh quần/váy:' },
-                    { inlineData: { mimeType: 'image/jpeg', data: bottomB64 } },
-                    { text: 'Nhiệm vụ: Mặc áo và quần/váy này lên người mẫu một cách chân thực nhất. Giữ nguyên tư thế, ánh sáng và phông nền của ảnh người mẫu ban đầu.' },
-                ],
-            },
-            config: { imageConfig: { aspectRatio: "3:4" } }
-        });
-
-        if (response.candidates?.[0]?.content?.parts) {
-            for (const part of response.candidates[0].content.parts) {
-                if (part.inlineData) return `data:image/jpeg;base64,${part.inlineData.data}`;
-            }
-        }
-        throw new Error("AI không trả về kết quả hình ảnh.");
-    } catch (error: any) {
-        console.error("Mix Image error:", error);
-        throw error;
-    }
-};
-
-export const analyzeWardrobeItem = async (imageInput: string): Promise<Partial<WardrobeItem>> => {
-  const ai = getAiClient();
-  if (!ai) throw new Error("Chưa cấu hình API Key.");
-  
-  const rawB64 = await getRawBase64(imageInput);
-  if (!rawB64) throw new Error("Lỗi dữ liệu ảnh phân tích.");
-
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: {
-      parts: [
-        { inlineData: { mimeType: 'image/jpeg', data: rawB64 } },
-        { text: "Phân loại món đồ thời trang này. Trả về JSON với các trường: category ('top', 'bottom', 'skirt', 'dress', 'shoe', 'accessory'), tags (mảng các tag bằng tiếng Việt), color (tên màu bằng tiếng Việt), material (tên chất liệu bằng tiếng Việt). Lưu ý: Toàn bộ nội dung text phải là tiếng Việt." }
-      ]
-    },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          category: { type: Type.STRING, enum: ['top', 'bottom', 'skirt', 'dress', 'shoe', 'accessory'] },
-          tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-          color: { type: Type.STRING },
-          material: { type: Type.STRING }
-        },
-        required: ["category"]
-      }
-    }
-  });
-  return JSON.parse(response.text || "{}");
-};
-
 export const generateTagsFromImage = async (imageInput: string): Promise<AiTags> => {
-  const ai = getAiClient();
-  if (!ai) throw new Error("Chưa cấu hình API Key.");
-  
+  const ai = getAi();
   const rawB64 = await getRawBase64(imageInput);
   if (!rawB64) throw new Error("Lỗi dữ liệu ảnh phân tích.");
 
@@ -176,20 +61,89 @@ export const generateTagsFromImage = async (imageInput: string): Promise<AiTags>
   }
 };
 
-export const suggestWeatherOutfit = async (wardrobe: WardrobeItem[], weather: WeatherData) => {
-  const ai = getAiClient();
-  if (!ai) return { topId: '', bottomId: '', reason: 'No API Key' };
-
-  const prompt = `
-    Dữ liệu tủ đồ: ${JSON.stringify(wardrobe.map(i => ({id: i.id, cat: i.category, tags: i.tags, color: i.color})))}
-    Thời tiết hiện tại: ${weather.temp}°C, ${weather.condition}. ${weather.isRaining ? "Có khả năng mưa." : "Không mưa."}
-    Nhiệm vụ: Chọn 1 áo (top) và 1 quần/váy (bottom/skirt/dress) phù hợp nhất với thời tiết này. 
-    Trả về JSON với: topId, bottomId, reason (lời khuyên tiếng Việt ngắn gọn, tinh tế).
-  `;
-
+// Phân tích thông tin chi tiết của một món đồ trong tủ đồ
+export const analyzeWardrobeItem = async (imageInput: string): Promise<{ category: string, tags: string[], color: string, material: string }> => {
+  const ai = getAi();
+  const rawB64 = await getRawBase64(imageInput);
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: prompt,
+    contents: {
+      parts: [
+        { inlineData: { mimeType: 'image/jpeg', data: rawB64 } },
+        { text: "Phân tích món đồ thời trang này. Trả về JSON: category (một trong: top, bottom, skirt, dress, shoe, accessory), tags (mảng các tag mô tả bằng tiếng Việt), color (màu sắc chính bằng tiếng Việt), material (chất liệu bằng tiếng Việt)." }
+      ]
+    },
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          category: { type: Type.STRING },
+          tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+          color: { type: Type.STRING },
+          material: { type: Type.STRING }
+        },
+        required: ["category", "tags", "color", "material"]
+      }
+    }
+  });
+  return JSON.parse(response.text || '{}');
+};
+
+// Tách món đồ ra khỏi nền ảnh
+export const isolateClothingItem = async (imageInput: string, category: string): Promise<string> => {
+  const ai = getAi();
+  const rawB64 = await getRawBase64(imageInput);
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash-image",
+    contents: {
+      parts: [
+        { inlineData: { mimeType: 'image/jpeg', data: rawB64 } },
+        { text: `Tách món đồ (${category}) ra khỏi nền. Trả về ảnh món đồ trên nền trắng tinh.` }
+      ]
+    }
+  });
+  for (const part of response.candidates?.[0]?.content?.parts || []) {
+    if (part.inlineData) {
+      return `data:image/png;base64,${part.inlineData.data}`;
+    }
+  }
+  return imageInput;
+};
+
+// Tạo ảnh phối đồ bằng cách mặc áo và quần lên người mẫu
+export const generateMixImage = async (modelImage: string, topImage: string, bottomImage: string): Promise<string> => {
+  const ai = getAi();
+  const modelB64 = await getRawBase64(modelImage);
+  const topB64 = await getRawBase64(topImage);
+  const bottomB64 = await getRawBase64(bottomImage);
+  
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash-image",
+    contents: {
+      parts: [
+        { inlineData: { mimeType: 'image/jpeg', data: modelB64 } },
+        { inlineData: { mimeType: 'image/jpeg', data: topB64 } },
+        { inlineData: { mimeType: 'image/jpeg', data: bottomB64 } },
+        { text: "Hãy mặc chiếc áo và chiếc quần này lên người mẫu trong ảnh. Trả về ảnh kết quả cuối cùng chất lượng cao." }
+      ]
+    }
+  });
+  for (const part of response.candidates?.[0]?.content?.parts || []) {
+    if (part.inlineData) {
+      return `data:image/png;base64,${part.inlineData.data}`;
+    }
+  }
+  throw new Error("Không thể tạo ảnh phối đồ.");
+};
+
+// Gợi ý bộ phối đồ từ tủ đồ hiện có theo phong cách yêu cầu
+export const suggestComboFromWardrobe = async (wardrobe: WardrobeItem[], style: string): Promise<{ topId: string, bottomId: string, reason: string }> => {
+  const ai = getAi();
+  const wardrobeDesc = wardrobe.map(item => `ID: ${item.id}, Loại: ${item.category}, Tags: ${item.tags.join(', ')}, Màu: ${item.color}`).join('\n');
+  const response = await ai.models.generateContent({
+    model: "gemini-3-pro-preview",
+    contents: `Dưới đây là danh sách tủ đồ của tôi:\n${wardrobeDesc}\n\nHãy gợi ý 1 bộ phối đồ (1 topId và 1 bottomId) theo phong cách: ${style}. Trả về JSON: topId, bottomId, reason (lý do phối đồ bằng tiếng Việt).`,
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -198,41 +152,10 @@ export const suggestWeatherOutfit = async (wardrobe: WardrobeItem[], weather: We
           topId: { type: Type.STRING },
           bottomId: { type: Type.STRING },
           reason: { type: Type.STRING }
-        }
+        },
+        required: ["topId", "bottomId", "reason"]
       }
     }
   });
-  return JSON.parse(response.text || "{}");
-};
-
-export const suggestComboFromWardrobe = async (wardrobe: WardrobeItem[], request: string) => {
-    const ai = getAiClient();
-    if (!ai) return { topId: '', bottomId: '', reason: 'No API Key' };
-    const prompt = `Tủ đồ: ${JSON.stringify(wardrobe.map(i => ({id: i.id, cat: i.category, tags: i.tags})))}. Yêu cầu người dùng: ${request}. Chọn 1 áo (top) và 1 quần/váy (bottom) phù hợp. Trả về JSON {topId, bottomId, reason}. Lưu ý: Lý do (reason) phải bằng tiếng Việt.`;
-    const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    topId: { type: Type.STRING },
-                    bottomId: { type: Type.STRING },
-                    reason: { type: Type.STRING }
-                }
-            }
-        }
-    });
-    return JSON.parse(response.text || "{}");
-};
-
-export const generateOutfitSuggestion = async (tags: string[]): Promise<string> => {
-    const ai = getAiClient();
-    if (!ai) return "";
-    const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `Gợi ý phối đồ cho các món có tag: ${tags.join(', ')}. Hãy trả lời bằng tiếng Việt ngắn gọn.`,
-    });
-    return response.text || "";
+  return JSON.parse(response.text || '{}');
 };

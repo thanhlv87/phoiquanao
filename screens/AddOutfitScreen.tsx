@@ -121,6 +121,9 @@ export const AddOutfitScreen: React.FC = () => {
   const [bottoms, setBottoms] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   
+  // Custom date state to override param if photo time is different
+  const [workingDate, setWorkingDate] = useState<Date>(new Date());
+  
   // Weather states
   const [temp, setTemp] = useState<number | undefined>(undefined);
   const [condition, setCondition] = useState<string | undefined>(undefined);
@@ -137,12 +140,6 @@ export const AddOutfitScreen: React.FC = () => {
     return isEditMode ? state.allOutfits[outfitId] : undefined;
   }, [state.allOutfits, outfitId, isEditMode]);
 
-  const date = useMemo(() => {
-    if (isEditMode && existingOutfit) return parseDateString(existingOutfit.dateId);
-    if (dateParam) return parseDateString(dateParam);
-    return new Date();
-  }, [dateParam, existingOutfit, isEditMode]);
-
   useEffect(() => {
     if (isEditMode && existingOutfit) {
       setId(existingOutfit.id);
@@ -152,10 +149,15 @@ export const AddOutfitScreen: React.FC = () => {
       setTags(existingOutfit.tags);
       setTemp(existingOutfit.temperature);
       setCondition(existingOutfit.weatherCondition);
-    } else {
-      // Auto-fetch weather for new entries if date is today
+      setWorkingDate(new Date(existingOutfit.date));
+    } else if (dateParam) {
+      const initialDate = parseDateString(dateParam);
+      // Set time to middle of day initially
+      initialDate.setHours(12, 0, 0, 0);
+      setWorkingDate(initialDate);
+      
       const todayStr = getTodayDateString();
-      if (dateParam === todayStr || !dateParam) {
+      if (dateParam === todayStr) {
         fetchLocalWeather().then(weather => {
           if (weather) {
             setTemp(weather.temp);
@@ -167,9 +169,19 @@ export const AddOutfitScreen: React.FC = () => {
   }, [existingOutfit, isEditMode, dateParam]);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
+    if (e.target.files && e.target.files.length > 0) {
+      // Fix: Added explicit type cast to File[] for files array from FileList to resolve 'unknown' property access error.
+      const files = Array.from(e.target.files) as File[];
       setError(null);
+      
+      // Lấy thời gian chụp (lastModified) của tấm ảnh đầu tiên
+      const firstFile = files[0];
+      if (firstFile.lastModified && !isEditMode) {
+          const captureTime = new Date(firstFile.lastModified);
+          console.log("Detected capture time:", captureTime);
+          setWorkingDate(captureTime);
+      }
+
       try {
         const compressedFiles = await Promise.all(
           files.map((file: File) => compressImage(file, { maxWidth: 1080, quality: 0.7 }))
@@ -218,7 +230,8 @@ export const AddOutfitScreen: React.FC = () => {
   };
 
   const handleSave = async () => {
-    const dateId = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    // Generate dateId from workingDate (which might have been updated by photo time)
+    const dateId = `${workingDate.getFullYear()}-${String(workingDate.getMonth() + 1).padStart(2, '0')}-${String(workingDate.getDate()).padStart(2, '0')}`;
     
     if (images.length === 0 && newImageFiles.length === 0) {
       setError("Vui lòng thêm hình ảnh.");
@@ -230,7 +243,7 @@ export const AddOutfitScreen: React.FC = () => {
 
     const outfitData = {
       id,
-      date: new Date().toISOString(),
+      date: workingDate.toISOString(), // Sử dụng thời gian thực tế từ ảnh (nếu có)
       dateId,
       newImageFiles,
       existingImageUrls: images,
@@ -301,12 +314,12 @@ export const AddOutfitScreen: React.FC = () => {
           <Icon name="back" className="w-5 h-5 text-slate-700" />
         </button>
         <div className="text-center">
-            <h1 className="text-xl font-black text-slate-800 tracking-tight leading-tight">{formatDate(date)}</h1>
-            {temp !== undefined && (
-                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-0.5">
-                    {temp}°C {condition ? `• ${condition}` : ''}
-                </p>
-            )}
+            <h1 className="text-xl font-black text-slate-800 tracking-tight leading-tight">{formatDate(workingDate)}</h1>
+            <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-0.5">
+                {workingDate.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                {temp !== undefined ? ` • ${temp}°C` : ''}
+                {condition ? ` • ${condition}` : ''}
+            </p>
         </div>
         <div className="w-10"></div>
       </header>

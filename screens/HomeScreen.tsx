@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOutfits } from '../hooks/useOutfits';
 import { useAuth } from '../hooks/useAuth';
-import { getTodayDateString } from '../utils/dateUtils';
+import { getTodayDateString, formatTime } from '../utils/dateUtils';
 import { fetchLocalWeather, WeatherData } from '../services/weatherService';
 import { Icon } from '../components/Icon';
 import { Outfit } from '../types';
@@ -66,11 +66,16 @@ const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => 
                     <div key={outfit.id} onClick={() => onNavigate(outfit.id)} className="snap-start flex-shrink-0 w-[85%] bg-white rounded-[2.2rem] shadow-lg overflow-hidden transition-all hover:scale-[1.01] cursor-pointer p-2 border border-slate-100">
                         <div className="aspect-square rounded-[1.8rem] overflow-hidden relative">
                           <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full h-full object-cover" />
-                          {outfit.temperature !== undefined && (
-                              <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-2 py-1 rounded-xl shadow-sm border border-white/50">
-                                  <p className="text-[10px] font-black text-slate-800 leading-none">{outfit.temperature}°C</p>
+                          <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
+                              {outfit.temperature !== undefined && (
+                                  <div className="bg-white/90 backdrop-blur-md px-2 py-1 rounded-xl shadow-sm border border-white/50">
+                                      <p className="text-[10px] font-black text-slate-800 leading-none">{outfit.temperature}°C</p>
+                                  </div>
+                              )}
+                              <div className="bg-indigo-600/90 backdrop-blur-md px-2 py-1 rounded-xl shadow-sm border border-indigo-400/30">
+                                  <p className="text-[10px] font-black text-white leading-none">{formatTime(outfit.date)}</p>
                               </div>
-                          )}
+                          </div>
                         </div>
                         <div className="p-4">
                             <div className="flex flex-wrap gap-1.5">

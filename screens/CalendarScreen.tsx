@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useOutfits } from '../hooks/useOutfits';
 import { Icon } from '../components/Icon';
 import { Outfit } from '../types';
-import { formatDate, parseDateString } from '../utils/dateUtils';
+import { formatDate, parseDateString, formatTime } from '../utils/dateUtils';
 
 const monthNames = [
   "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
@@ -33,15 +33,24 @@ const OutfitDetailModal: React.FC<{ outfit: Outfit; onClose: () => void; onUpdat
                         <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full aspect-square object-cover" />
                     )}
                     <button onClick={onClose} className="absolute top-4 right-4 bg-white/90 text-slate-900 rounded-full w-10 h-10 flex items-center justify-center text-xl shadow-lg">&times;</button>
-                    {outfit.temperature !== undefined && (
-                        <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-2xl text-xs font-black shadow-lg">
-                            🌡️ {outfit.temperature}°C {outfit.weatherCondition ? `• ${outfit.weatherCondition}` : ''}
+                    
+                    <div className="absolute bottom-4 left-4 flex gap-2">
+                        <div className="bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-2xl text-[10px] font-black shadow-lg">
+                            🕒 {formatTime(outfit.date)}
                         </div>
-                    )}
+                        {outfit.temperature !== undefined && (
+                            <div className="bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-2xl text-[10px] font-black shadow-lg">
+                                🌡️ {outfit.temperature}°C
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="p-6 overflow-y-auto">
-                    <h3 className="text-xl font-black text-slate-800 mb-4 tracking-tight uppercase">Chi tiết trang phục</h3>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xl font-black text-slate-800 tracking-tight uppercase">Chi tiết trang phục</h3>
+                        {outfit.weatherCondition && <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{outfit.weatherCondition}</span>}
+                    </div>
                     <div className="space-y-4">
                         <div>
                             <p className="text-[10px] font-black uppercase text-indigo-600 mb-1 tracking-widest">Áo</p>
@@ -107,11 +116,16 @@ const OutfitPreview: React.FC<{
                         <div key={outfit.id} onClick={() => onSelectOutfit(outfit)} className="bg-white p-2 rounded-[2rem] shadow-sm border border-slate-50 cursor-pointer hover:shadow-xl transition-all active:scale-95">
                             <div className="aspect-square bg-slate-100 rounded-[1.5rem] overflow-hidden mb-2 relative">
                                 <img src={outfit.imageUrls[0]} alt="Preview" className="w-full h-full object-cover" />
-                                {outfit.temperature !== undefined && (
-                                    <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white px-1.5 py-0.5 rounded-lg text-[8px] font-black">
-                                        {outfit.temperature}°C
+                                <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+                                    {outfit.temperature !== undefined && (
+                                        <div className="bg-black/50 backdrop-blur-sm text-white px-1.5 py-0.5 rounded-lg text-[8px] font-black">
+                                            {outfit.temperature}°C
+                                        </div>
+                                    )}
+                                    <div className="bg-indigo-600/80 backdrop-blur-sm text-white px-1.5 py-0.5 rounded-lg text-[8px] font-black">
+                                        {formatTime(outfit.date)}
                                     </div>
-                                )}
+                                </div>
                             </div>
                             <div className="px-2 pb-1">
                                 <p className="text-[10px] font-black uppercase text-indigo-600 truncate">{outfit.tops[0] || 'Phối đồ'}</p>

@@ -13,6 +13,15 @@ export const formatDate = (date: Date): string => {
   }).format(date);
 };
 
+export const formatTime = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  return date.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+};
+
 export const parseDateString = (dateStr: string): Date => {
   const [year, month, day] = dateStr.split('-').map(Number);
   // Month is 0-indexed in JS Date

@@ -170,7 +170,6 @@ export const AddOutfitScreen: React.FC = () => {
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      // Fix: Added explicit type cast to File[] for files array from FileList to resolve 'unknown' property access error.
       const files = Array.from(e.target.files) as File[];
       setError(null);
       
@@ -243,7 +242,7 @@ export const AddOutfitScreen: React.FC = () => {
 
     const outfitData = {
       id,
-      date: workingDate.toISOString(), // Sử dụng thời gian thực tế từ ảnh (nếu có)
+      date: workingDate.toISOString(), 
       dateId,
       newImageFiles,
       existingImageUrls: images,
@@ -254,17 +253,22 @@ export const AddOutfitScreen: React.FC = () => {
       weatherCondition: condition
     };
 
-    try {
-      await addOrUpdateOutfit(outfitData);
-      [...tops].forEach(t => addSuggestion('tops', t));
-      [...bottoms].forEach(t => addSuggestion('bottoms', t));
-      [...tags].forEach(t => addSuggestion('tags', t));
-      navigate('/');
-    } catch (error) {
-      console.error("Error saving outfit:", error);
-      setError("Không thể lưu. Vui lòng thử lại.");
-      setIsSaving(false);
-    }
+    // OPTIMISTIC UPDATE STRATEGY:
+    // Fire the save request but navigate immediately. 
+    // The hook will handle state update instantly and sync in background.
+    addOrUpdateOutfit(outfitData).catch(err => {
+        // This catch block handles background errors, usually won't block navigation
+        console.error("Background save failed:", err);
+        // In a real app, we might trigger a global toast error here
+    });
+
+    // Save suggestions locally
+    [...tops].forEach(t => addSuggestion('tops', t));
+    [...bottoms].forEach(t => addSuggestion('bottoms', t));
+    [...tags].forEach(t => addSuggestion('tags', t));
+
+    // Navigate immediately - Do not wait for await
+    navigate('/');
   };
   
   const handleDeleteClick = () => {

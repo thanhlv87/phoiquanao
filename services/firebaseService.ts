@@ -15,6 +15,11 @@ export const getOutfits = async (userId: string): Promise<Outfit[]> => {
     }
 };
 
+// Hàm Helper để tạo ID mới (cho Optimistic UI)
+export const generateOutfitId = (userId: string): string => {
+    return doc(collection(db, 'users', userId, 'outfits')).id;
+};
+
 export const addOrUpdateOutfit = async (userId: string, outfitData: any): Promise<Outfit> => {
     let updatedImageUrls = [...(outfitData.existingImageUrls || [])];
 
@@ -29,8 +34,12 @@ export const addOrUpdateOutfit = async (userId: string, outfitData: any): Promis
     delete dataToSave.newImageFiles;
     delete dataToSave.existingImageUrls;
 
-    const docRef = outfitData.id ? doc(db, 'users', userId, 'outfits', outfitData.id) : doc(collection(db, 'users', userId, 'outfits'));
+    // Sử dụng ID đã có hoặc tạo mới nếu chưa có
+    const docRef = doc(db, 'users', userId, 'outfits', outfitData.id || generateOutfitId(userId));
+    
+    // Đảm bảo ID trong data khớp với ID document
     const outfit = { ...dataToSave, id: docRef.id };
+    
     await setDoc(docRef, outfit, { merge: true });
     return outfit;
 };

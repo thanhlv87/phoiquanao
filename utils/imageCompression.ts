@@ -19,13 +19,13 @@ export const compressImage = async (
       const ctx = canvas.getContext('2d');
       if (!ctx) return reject(new Error('Canvas context failed'));
 
-      // Vẽ nền trắng nếu là ảnh tách nền (giúp Gemini nhận diện tốt hơn)
+      // Vẽ nền trắng nếu là ảnh tách nền (giúp Gemini nhận diện tốt hơn và đẹp hơn trên WebP)
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, width, height);
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Trả về data URL (base64)
-      const compressedBase64 = canvas.toDataURL('image/jpeg', options.quality);
+      // SỬ DỤNG WEBP: Nhẹ hơn JPEG rất nhiều mà chất lượng tương đương
+      const compressedBase64 = canvas.toDataURL('image/webp', options.quality);
       resolve(compressedBase64);
     };
 

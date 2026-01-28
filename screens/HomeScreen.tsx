@@ -65,7 +65,13 @@ const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => 
                 {outfits.map((outfit) => (
                     <div key={outfit.id} onClick={() => onNavigate(outfit.id)} className="snap-start flex-shrink-0 w-[85%] bg-white rounded-[2.2rem] shadow-lg overflow-hidden transition-all hover:scale-[1.01] cursor-pointer p-2 border border-slate-100">
                         <div className="aspect-square rounded-[1.8rem] overflow-hidden relative">
-                          <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full h-full object-cover" />
+                          <img 
+                              src={outfit.imageUrls[0]} 
+                              alt="Outfit" 
+                              loading="lazy"
+                              decoding="async"
+                              className="w-full h-full object-cover" 
+                          />
                           <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
                               {outfit.temperature !== undefined && (
                                   <div className="bg-white/90 backdrop-blur-md px-2 py-1 rounded-xl shadow-sm border border-white/50">

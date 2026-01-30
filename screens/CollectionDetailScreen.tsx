@@ -73,8 +73,6 @@ export const CollectionDetailScreen: React.FC = () => {
                                     <img 
                                         src={outfit.imageUrls[0]} 
                                         alt="Outfit" 
-                                        loading="lazy"
-                                        decoding="async"
                                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                     />
                                 </div>

@@ -5,27 +5,30 @@ import { HomeScreen } from './screens/HomeScreen';
 import { CalendarScreen } from './screens/CalendarScreen';
 import { AddOutfitScreen } from './screens/AddOutfitScreen';
 import { AuthScreen } from './screens/AuthScreen';
+import { CollectionsScreen } from './screens/CollectionsScreen';
+import { CollectionDetailScreen } from './screens/CollectionDetailScreen';
 import { BottomNav } from './components/BottomNav';
 import { OutfitProvider } from './hooks/useOutfits';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { CollectionProvider } from './hooks/useCollections';
 
 const HomeSkeleton: React.FC = () => (
-  <div className="p-4 md:p-6 min-h-screen bg-cream-50 animate-pulse">
+  <div className="p-4 md:p-6 min-h-screen bg-slate-50 animate-pulse">
     <div className="flex justify-between items-center mb-8 pt-8">
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+        <div className="w-12 h-12 bg-slate-200 rounded-2xl"></div>
         <div className="space-y-2">
-          <div className="w-24 h-4 bg-gray-200 rounded"></div>
-          <div className="w-32 h-6 bg-gray-200 rounded"></div>
+          <div className="w-24 h-4 bg-slate-200 rounded"></div>
+          <div className="w-16 h-3 bg-slate-200 rounded"></div>
         </div>
       </div>
       <div className="flex gap-2">
-        <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+        <div className="w-10 h-10 bg-slate-200 rounded-2xl"></div>
       </div>
     </div>
-    <div className="w-full h-32 bg-gray-200 rounded-[2.2rem] mb-8"></div>
-    <div className="w-32 h-4 bg-gray-200 rounded mb-4"></div>
-    <div className="w-full aspect-[4/5] bg-gray-200 rounded-[2.2rem]"></div>
+    <div className="w-full h-24 bg-slate-200 rounded-[2.2rem] mb-8"></div>
+    <div className="w-32 h-3 bg-slate-200 rounded mb-4"></div>
+    <div className="w-full aspect-[4/5] bg-slate-200 rounded-[2.2rem]"></div>
   </div>
 );
 
@@ -46,9 +49,9 @@ const OfflineBanner: React.FC = () => {
   if (!isOffline) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[100] bg-charcoal text-white text-[10px] font-bold uppercase py-3 px-4 flex items-center justify-center gap-2 animate-fade-in shadow-lg tracking-widest">
-      <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
-      OFFLINE MODE
+    <div className="fixed top-0 left-0 right-0 z-[100] bg-red-500 text-white text-[10px] font-black uppercase py-2 px-4 flex items-center justify-center gap-2 animate-fade-in shadow-lg">
+      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+      CHẾ ĐỘ NGOẠI TUYẾN
     </div>
   );
 };
@@ -75,9 +78,9 @@ function AppContent() {
   const showNav = !isAuthPage && user;
 
   return (
-    <div className="max-w-lg mx-auto bg-cream-50 min-h-screen font-sans shadow-2xl relative border-x border-gray-100/50">
+    <div className="max-w-lg mx-auto bg-slate-50 min-h-screen font-sans shadow-2xl relative">
       <OfflineBanner />
-      <main className={showNav ? "pb-28" : ""}>
+      <main className={showNav ? "pb-24" : ""}>
         <Routes>
           <Route path="/auth" element={<AuthScreen />} />
           <Route
@@ -87,6 +90,8 @@ function AppContent() {
                 <Routes>
                   <Route path="/" element={<HomeScreen />} />
                   <Route path="/calendar" element={<CalendarScreen />} />
+                  <Route path="/collections" element={<CollectionsScreen />} />
+                  <Route path="/collection/:collectionId" element={<CollectionDetailScreen />} />
                   <Route path="/add-outfit/:date" element={<AddOutfitScreen />} />
                   <Route path="/outfit/:outfitId" element={<AddOutfitScreen />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
@@ -104,9 +109,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <OutfitProvider>
-        <AppContent />
-      </OutfitProvider>
+      <CollectionProvider>
+        <OutfitProvider>
+          <AppContent />
+        </OutfitProvider>
+      </CollectionProvider>
     </AuthProvider>
   );
 }

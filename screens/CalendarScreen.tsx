@@ -1,10 +1,10 @@
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOutfits } from '../hooks/useOutfits';
 import { Icon } from '../components/Icon';
 import { Outfit } from '../types';
-import { formatDate, parseDateString, formatTime } from '../utils/dateUtils';
+import { formatDate, parseDateString } from '../utils/dateUtils';
 
 const monthNames = [
   "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
@@ -13,140 +13,61 @@ const monthNames = [
 const dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
 const OutfitDetailModal: React.FC<{ outfit: Outfit; onClose: () => void; onUpdate: (id: string) => void }> = ({ outfit, onClose, onUpdate }) => {
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const [currentSlide, setCurrentSlide] = useState(0);
-
-    const handleScroll = () => {
-        if (scrollRef.current) {
-            const index = Math.round(scrollRef.current.scrollLeft / scrollRef.current.clientWidth);
-            setCurrentSlide(index);
-        }
-    };
-
-    const scrollTo = (direction: 'left' | 'right') => {
-        if (scrollRef.current) {
-            const newIndex = direction === 'left' ? currentSlide - 1 : currentSlide + 1;
-            if (newIndex >= 0 && newIndex < outfit.imageUrls.length) {
-                scrollRef.current.scrollTo({
-                    left: newIndex * scrollRef.current.clientWidth,
-                    behavior: 'smooth'
-                });
-                setCurrentSlide(newIndex);
-            }
-        }
-    };
-
     return (
         <div 
-            className="fixed inset-0 bg-charcoal/40 backdrop-blur-md z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
             onClick={onClose}
         >
             <div 
                 className="bg-white rounded-t-[40px] sm:rounded-[40px] shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden animate-slide-up"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="flex-shrink-0 relative group bg-gray-100">
-                     {outfit.imageUrls.length > 0 ? (
-                        <>
-                            <div 
-                                ref={scrollRef}
-                                onScroll={handleScroll}
-                                className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
-                            >
-                                {outfit.imageUrls.map((url, index) => (
-                                    <img 
-                                        key={index} 
-                                        src={url} 
-                                        alt={`Outfit ${index + 1}`} 
-                                        loading="lazy"
-                                        decoding="async"
-                                        className="w-full aspect-square object-cover flex-shrink-0 snap-center" 
-                                    />
-                                ))}
-                            </div>
-                            
-                            {/* Navigation Arrows */}
-                            {outfit.imageUrls.length > 1 && (
-                                <>
-                                    {currentSlide > 0 && (
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); scrollTo('left'); }}
-                                            className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/50 transition-all"
-                                        >
-                                            <Icon name="chevron-left" className="w-5 h-5" />
-                                        </button>
-                                    )}
-                                    {currentSlide < outfit.imageUrls.length - 1 && (
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); scrollTo('right'); }}
-                                            className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/50 transition-all"
-                                        >
-                                            <Icon name="chevron-right" className="w-5 h-5" />
-                                        </button>
-                                    )}
-                                    
-                                    <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                                        {outfit.imageUrls.map((_, idx) => (
-                                            <div 
-                                                key={idx} 
-                                                className={`w-1.5 h-1.5 rounded-full transition-all shadow-sm ${idx === currentSlide ? 'bg-white w-4' : 'bg-white/50'}`}
-                                            />
-                                        ))}
-                                    </div>
-                                </>
-                            )}
-                        </>
+                <div className="flex-shrink-0 relative">
+                     {outfit.imageUrls.length > 1 ? (
+                        <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide">
+                            {outfit.imageUrls.map((url, index) => (
+                                <img key={index} src={url} alt={`Outfit ${index + 1}`} className="w-full aspect-square object-cover flex-shrink-0 snap-center" />
+                            ))}
+                        </div>
                     ) : (
-                        <div className="w-full aspect-square bg-gray-100 flex items-center justify-center text-gray-400">
-                             Không có ảnh
+                        <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full aspect-square object-cover" />
+                    )}
+                    <button onClick={onClose} className="absolute top-4 right-4 bg-white/90 text-slate-900 rounded-full w-10 h-10 flex items-center justify-center text-xl shadow-lg">&times;</button>
+                    {outfit.temperature !== undefined && (
+                        <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-2xl text-xs font-black shadow-lg">
+                            🌡️ {outfit.temperature}°C {outfit.weatherCondition ? `• ${outfit.weatherCondition}` : ''}
                         </div>
                     )}
-
-                    <button onClick={onClose} className="absolute top-4 right-4 bg-white/90 text-charcoal rounded-full w-10 h-10 flex items-center justify-center text-xl shadow-lg z-20 hover:bg-white">&times;</button>
-                    
-                    <div className="absolute bottom-4 left-4 flex gap-2 z-10">
-                        <div className="bg-charcoal/80 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg tracking-wider">
-                            {formatTime(outfit.date)}
-                        </div>
-                        {outfit.temperature !== undefined && (
-                            <div className="bg-white/90 backdrop-blur-md text-charcoal px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg">
-                                {outfit.temperature}°C
-                            </div>
-                        )}
-                    </div>
                 </div>
 
-                <div className="p-8 overflow-y-auto">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-2xl font-serif text-charcoal tracking-tight">Chi tiết trang phục</h3>
-                        {outfit.weatherCondition && <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest border border-gray-200 px-2 py-1 rounded-md">{outfit.weatherCondition}</span>}
-                    </div>
-                    <div className="space-y-6">
+                <div className="p-6 overflow-y-auto">
+                    <h3 className="text-xl font-black text-slate-800 mb-4 tracking-tight uppercase">Chi tiết trang phục</h3>
+                    <div className="space-y-4">
                         <div>
-                            <p className="text-[10px] font-bold uppercase text-sage-600 mb-2 tracking-[0.2em]">Áo</p>
+                            <p className="text-[10px] font-black uppercase text-indigo-600 mb-1 tracking-widest">Áo</p>
                             <div className="flex flex-wrap gap-2">
-                                {outfit.tops.length > 0 ? outfit.tops.map(tag => <span key={tag} className="bg-sage-50 text-sage-700 text-xs font-bold px-4 py-2 rounded-full">{tag}</span>) : <span className="text-xs text-gray-400 italic">Chưa cập nhật</span>}
+                                {outfit.tops.map(tag => <span key={tag} className="bg-indigo-50 text-indigo-700 text-xs font-bold px-4 py-1.5 rounded-full">{tag}</span>)}
                             </div>
                         </div>
                         <div>
-                            <p className="text-[10px] font-bold uppercase text-gray-500 mb-2 tracking-[0.2em]">Quần/Váy</p>
+                            <p className="text-[10px] font-black uppercase text-emerald-600 mb-1 tracking-widest">Quần/Váy</p>
                             <div className="flex flex-wrap gap-2">
-                                {outfit.bottoms.length > 0 ? outfit.bottoms.map(tag => <span key={tag} className="bg-gray-100 text-charcoal text-xs font-bold px-4 py-2 rounded-full">{tag}</span>) : <span className="text-xs text-gray-400 italic">Chưa cập nhật</span>}
+                                {outfit.bottoms.map(tag => <span key={tag} className="bg-emerald-50 text-emerald-700 text-xs font-bold px-4 py-1.5 rounded-full">{tag}</span>)}
                             </div>
                         </div>
                         {outfit.tags.length > 0 && (
                             <div>
-                                <p className="text-[10px] font-bold uppercase text-gray-400 mb-2 tracking-[0.2em]">Khác</p>
+                                <p className="text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Khác</p>
                                 <div className="flex flex-wrap gap-2">
-                                    {outfit.tags.map(tag => <span key={tag} className="border border-gray-200 text-gray-500 text-xs font-bold px-4 py-2 rounded-full">{tag}</span>)}
+                                    {outfit.tags.map(tag => <span key={tag} className="bg-slate-50 text-slate-500 text-xs font-bold px-4 py-1.5 rounded-full">{tag}</span>)}
                                 </div>
                             </div>
                         )}
                     </div>
                 </div>
 
-                <div className="p-6 border-t border-gray-100 bg-white flex-shrink-0 flex items-center gap-4">
-                    <button onClick={() => onUpdate(outfit.id)} className="flex-1 bg-charcoal text-white font-bold py-4 rounded-2xl shadow-xl hover:bg-black transition-all text-xs uppercase tracking-widest">Sửa trang phục</button>
+                <div className="p-6 border-t border-slate-50 bg-slate-50/50 flex-shrink-0 flex items-center gap-4">
+                    <button onClick={() => onUpdate(outfit.id)} className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all">SỬA PHỐI ĐỒ</button>
                 </div>
             </div>
         </div>
@@ -167,68 +88,33 @@ const OutfitPreview: React.FC<{
         <div className="p-6 animate-fade-in">
              <div className="flex justify-between items-center mb-6">
                 <div>
-                    <h2 className="text-2xl font-serif text-charcoal tracking-tight">{formatDate(date)}</h2>
-                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{outfits.length} BỘ TRANG PHỤC</p>
+                    <h2 className="text-xl font-black text-slate-800 tracking-tight">{formatDate(date)}</h2>
+                    <p className="text-xs text-slate-400 font-bold uppercase">{outfits.length} BỘ TRANG PHỤC</p>
                 </div>
-                <button onClick={() => onAddOutfit(dateId)} className="w-12 h-12 rounded-full bg-sage-600 text-white flex items-center justify-center shadow-lg hover:bg-sage-700 active:scale-90 transition-all">
+                <button onClick={() => onAddOutfit(dateId)} className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-100 active:scale-90 transition-all">
                     <Icon name="plus" className="w-6 h-6" />
                 </button>
             </div>
             
             {outfits.length === 0 ? (
-                <div className="py-16 flex flex-col items-center bg-white rounded-[2.5rem] border border-dashed border-gray-200 text-center">
-                    <p className="text-gray-400 font-bold text-[10px] uppercase tracking-widest mb-4">Ngày này chưa có kỷ niệm</p>
-                    <button onClick={() => onAddOutfit(dateId)} className="text-sage-600 font-bold text-sm underline underline-offset-4 decoration-2">Ghi lại ngay</button>
+                <div className="py-12 flex flex-col items-center bg-white rounded-[40px] border-2 border-dashed border-slate-100 text-center">
+                    <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-4">Ngày này chưa có kỷ niệm</p>
+                    <button onClick={() => onAddOutfit(dateId)} className="text-indigo-600 font-bold text-sm underline underline-offset-4">Ghi lại ngay</button>
                 </div>
             ) : (
                 <div className="grid grid-cols-2 gap-4">
                     {outfits.map(outfit => (
-                        <div key={outfit.id} onClick={() => onSelectOutfit(outfit)} className="bg-white p-2 rounded-[2rem] shadow-sm border border-gray-50 cursor-pointer hover:shadow-xl transition-all active:scale-95 group">
-                            <div className="aspect-[4/5] bg-gray-100 rounded-[1.5rem] overflow-hidden mb-3 relative">
-                                {outfit.imageUrls.length > 1 ? (
-                                    <div className="w-full h-full grid grid-cols-2 gap-0.5">
-                                        <img 
-                                            src={outfit.imageUrls[0]} 
-                                            alt="Preview 1" 
-                                            loading="lazy"
-                                            decoding="async"
-                                            className="w-full h-full object-cover" 
-                                        />
-                                        <div className="relative w-full h-full overflow-hidden">
-                                            <img 
-                                                src={outfit.imageUrls[1]} 
-                                                alt="Preview 2" 
-                                                loading="lazy"
-                                                decoding="async"
-                                                className="w-full h-full object-cover" 
-                                            />
-                                            {outfit.imageUrls.length > 2 && (
-                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[1px]">
-                                                    <span className="text-white font-bold text-[10px]">+{outfit.imageUrls.length - 2}</span>
-                                                </div>
-                                            )}
-                                        </div>
+                        <div key={outfit.id} onClick={() => onSelectOutfit(outfit)} className="bg-white p-2 rounded-[2rem] shadow-sm border border-slate-50 cursor-pointer hover:shadow-xl transition-all active:scale-95">
+                            <div className="aspect-square bg-slate-100 rounded-[1.5rem] overflow-hidden mb-2 relative">
+                                <img src={outfit.imageUrls[0]} alt="Preview" className="w-full h-full object-cover" />
+                                {outfit.temperature !== undefined && (
+                                    <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white px-1.5 py-0.5 rounded-lg text-[8px] font-black">
+                                        {outfit.temperature}°C
                                     </div>
-                                ) : (
-                                    <img 
-                                        src={outfit.imageUrls[0]} 
-                                        alt="Preview" 
-                                        loading="lazy"
-                                        decoding="async"
-                                        className="w-full h-full object-cover" 
-                                    />
                                 )}
-                                
-                                <div className="absolute top-2 right-2 flex flex-col gap-1 items-end z-10">
-                                    {outfit.temperature !== undefined && (
-                                        <div className="bg-white/80 backdrop-blur-sm text-charcoal px-2 py-0.5 rounded-full text-[9px] font-bold">
-                                            {outfit.temperature}°
-                                        </div>
-                                    )}
-                                </div>
                             </div>
                             <div className="px-2 pb-1">
-                                <p className="text-[10px] font-bold uppercase text-sage-600 truncate tracking-wide">{outfit.tops[0] || 'Phối đồ'}</p>
+                                <p className="text-[10px] font-black uppercase text-indigo-600 truncate">{outfit.tops[0] || 'Phối đồ'}</p>
                             </div>
                         </div>
                     ))}
@@ -272,29 +158,24 @@ export const CalendarScreen: React.FC = () => {
       const isSelected = dateId === selectedDateId;
 
       grid.push(
-        <div key={dateId} onClick={() => handleDayClick(dateId)} className="relative aspect-square cursor-pointer group">
-          <div className={`w-full h-full rounded-2xl flex items-center justify-center transition-all duration-500 ${isSelected ? 'ring-2 ring-sage-500 bg-white shadow-lg scale-105 z-10' : ''}`}>
+        <div key={dateId} onClick={() => handleDayClick(dateId)} className="relative aspect-square cursor-pointer">
+          <div className={`w-full h-full rounded-2xl flex items-center justify-center transition-all duration-300 ${isSelected ? 'ring-2 ring-indigo-500 bg-indigo-50 shadow-md scale-105 z-10' : ''}`}>
             {hasOutfit ? (
               <div className="w-full h-full rounded-2xl overflow-hidden relative">
-                <img 
-                    src={outfitsForDay[0].imageUrls[0]} 
-                    alt="Outfit" 
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" 
-                />
+                <img src={outfitsForDay[0].imageUrls[0]} alt="Outfit" className="w-full h-full object-cover opacity-80" />
+                <div className="absolute inset-0 bg-black/10"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-white font-serif font-bold text-lg drop-shadow-md">{day}</span>
+                    <span className="text-white font-black text-sm drop-shadow-md">{day}</span>
                 </div>
                 {outfitsForDay.length > 1 && (
-                    <div className="absolute top-1 right-1 bg-white text-sage-600 text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-sm">
+                    <div className="absolute top-1 right-1 bg-indigo-600 text-white text-[8px] font-black rounded-full w-4 h-4 flex items-center justify-center border border-white">
                         {outfitsForDay.length}
                     </div>
                 )}
               </div>
             ) : (
-              <div className={`w-full h-full rounded-2xl flex items-center justify-center hover:bg-white ${day === today.getDate() && currentMonth === today.getMonth() ? 'border border-sage-200 bg-sage-50' : ''}`}>
-                <span className={`text-sm font-bold ${day === today.getDate() && currentMonth === today.getMonth() ? 'text-sage-600' : 'text-gray-300'}`}>{day}</span>
+              <div className={`w-full h-full rounded-2xl flex items-center justify-center hover:bg-slate-100 ${day === today.getDate() && currentMonth === today.getMonth() ? 'border-2 border-indigo-200' : ''}`}>
+                <span className={`text-sm font-bold ${day === today.getDate() && currentMonth === today.getMonth() ? 'text-indigo-600' : 'text-slate-400'}`}>{day}</span>
               </div>
             )}
           </div>
@@ -305,7 +186,7 @@ export const CalendarScreen: React.FC = () => {
   }, [currentYear, currentMonth, outfitsByDate, handleDayClick, selectedDateId]);
 
   return (
-    <div className="flex flex-col h-screen bg-cream-50">
+    <div className="flex flex-col h-screen bg-slate-50">
       {selectedOutfitForModal && (
         <OutfitDetailModal
             outfit={selectedOutfitForModal}
@@ -314,31 +195,31 @@ export const CalendarScreen: React.FC = () => {
         />
       )}
       
-      <header className="p-6 bg-cream-50 pt-14 pb-4">
-        <div className="flex justify-between items-center px-2 mb-4">
-          <button onClick={handlePrevMonth} className="p-3 rounded-full hover:bg-white transition-colors">
-            <Icon name="chevron-left" className="w-5 h-5 text-gray-600" />
+      <header className="p-6 bg-white rounded-b-[40px] shadow-sm pt-14">
+        <div className="flex justify-between items-center px-2 mb-2">
+          <button onClick={handlePrevMonth} className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors">
+            <Icon name="chevron-left" className="w-5 h-5 text-slate-600" />
           </button>
           <div className="text-center">
-            <h2 className="text-2xl font-serif text-charcoal tracking-tight">
+            <h2 className="text-lg font-black text-slate-800 tracking-tight uppercase">
               {monthNames[currentMonth]}
             </h2>
-            <p className="text-[10px] font-bold text-sage-500 uppercase tracking-[0.3em]">{currentYear}</p>
+            <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{currentYear}</p>
           </div>
-          <button onClick={handleNextMonth} className="p-3 rounded-full hover:bg-white transition-colors">
-            <Icon name="chevron-right" className="w-5 h-5 text-gray-600" />
+          <button onClick={handleNextMonth} className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors">
+            <Icon name="chevron-right" className="w-5 h-5 text-slate-600" />
           </button>
         </div>
         
         <div className="grid grid-cols-7 gap-1 mt-6 text-center">
           {dayNames.map(day => (
-            <div key={day} className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{day}</div>
+            <div key={day} className="text-[10px] font-black text-slate-300 uppercase tracking-tighter">{day}</div>
           ))}
         </div>
         
         {loading ? (
             <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sage-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
             </div>
           ) : (
             <div className="grid grid-cols-7 gap-2 mt-4">
@@ -347,7 +228,7 @@ export const CalendarScreen: React.FC = () => {
           )}
       </header>
       
-      <div className="flex-1 overflow-y-auto pb-28 border-t border-gray-100/50 bg-white/50">
+      <div className="flex-1 overflow-y-auto pb-24">
         <OutfitPreview
             dateId={selectedDateId}
             outfits={outfitsByDate[selectedDateId] || []}

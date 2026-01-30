@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOutfits } from '../hooks/useOutfits';
 import { useAuth } from '../hooks/useAuth';
-import { getTodayDateString, formatTime } from '../utils/dateUtils';
+import { getTodayDateString } from '../utils/dateUtils';
 import { fetchLocalWeather, WeatherData } from '../services/weatherService';
 import { Icon } from '../components/Icon';
 import { Outfit } from '../types';
@@ -11,26 +11,27 @@ import { Outfit } from '../types';
 const WeatherWidget: React.FC<{ weather: WeatherData | null; loading: boolean }> = ({ weather, loading }) => {
   if (loading && !weather) {
     return (
-      <div className="bg-white rounded-[2rem] p-6 mb-8 h-28 border border-gray-100 animate-pulse"></div>
+      <div className="bg-white/80 backdrop-blur-md rounded-[2.2rem] p-5 mb-8 h-24 shadow-sm border border-white/50 animate-pulse"></div>
     );
   }
   if (!weather) return null;
   return (
-    <div className="bg-white rounded-[2rem] p-6 mb-8 flex items-center justify-between border border-gray-100/50 shadow-sm animate-fade-in group hover:shadow-md transition-shadow">
-      <div className="flex items-center gap-5 min-w-0">
-        <div className="w-14 h-14 bg-sage-50 rounded-full flex items-center justify-center text-2xl shadow-inner flex-shrink-0 group-hover:scale-110 transition-transform duration-500">
+    <div className="bg-white/95 backdrop-blur-md rounded-[2.2rem] p-5 mb-8 flex items-center justify-between shadow-sm border border-white/50 animate-fade-in">
+      <div className="flex items-center gap-4 min-w-0">
+        <div className="w-11 h-11 bg-indigo-50 rounded-2xl flex items-center justify-center text-xl shadow-inner flex-shrink-0">
           {weather.isRaining ? '🌧️' : weather.temp > 28 ? '☀️' : '☁️'}
         </div>
         <div className="min-w-0">
-          <div className="flex items-center gap-1.5 mb-1">
-            <Icon name="search" className="w-3 h-3 text-sage-500" strokeWidth="2.5" />
-            <p className="text-[10px] font-bold uppercase text-sage-600 tracking-widest truncate">{weather.city}</p>
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <Icon name="search" className="w-3 h-3 text-indigo-500" strokeWidth="2.5" />
+            <p className="text-[10px] font-black uppercase text-indigo-600 tracking-wider truncate">{weather.city}</p>
           </div>
-          <p className="text-lg font-serif italic text-charcoal leading-none truncate">{weather.condition}</p>
+          <p className="text-sm font-bold text-slate-800 leading-tight truncate">{weather.condition}</p>
         </div>
       </div>
       <div className="text-right flex-shrink-0 ml-4">
-        <p className="text-4xl font-serif text-charcoal leading-none mb-1">{weather.temp}°</p>
+        <p className="text-2xl font-black text-slate-900 leading-none mb-1">{weather.temp}°</p>
+        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Hiện tại</p>
       </div>
     </div>
   );
@@ -59,50 +60,36 @@ const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => 
     if (outfits.length === 0) return null;
 
     return (
-        <div className="relative group/carousel">
-            <div ref={scrollContainerRef} onScroll={handleScroll} className="flex space-x-4 overflow-x-auto snap-x snap-mandatory pb-8 pt-2 scrollbar-hide px-1">
+        <div className="relative">
+            <div ref={scrollContainerRef} onScroll={handleScroll} className="flex space-x-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-hide px-1">
                 {outfits.map((outfit) => (
-                    <div key={outfit.id} onClick={() => onNavigate(outfit.id)} className="snap-start flex-shrink-0 w-[85%] bg-white rounded-[2rem] shadow-[0_10px_30px_rgba(0,0,0,0.03)] overflow-hidden transition-all hover:-translate-y-1 hover:shadow-xl cursor-pointer p-3 border border-gray-50">
-                        <div className="aspect-[4/5] rounded-[1.5rem] overflow-hidden relative">
-                          <img 
-                              src={outfit.imageUrls[0]} 
-                              alt="Outfit" 
-                              loading="lazy"
-                              decoding="async"
-                              className="w-full h-full object-cover" 
-                          />
-                          <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
-                              {outfit.temperature !== undefined && (
-                                  <div className="bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full shadow-sm">
-                                      <p className="text-[10px] font-bold text-charcoal leading-none">{outfit.temperature}°C</p>
-                                  </div>
-                              )}
-                          </div>
-                          <div className="absolute bottom-3 left-3">
-                               <div className="bg-charcoal/80 backdrop-blur-md px-3 py-1.5 rounded-full shadow-lg">
-                                  <p className="text-[10px] font-bold text-white leading-none tracking-wider">{formatTime(outfit.date)}</p>
+                    <div key={outfit.id} onClick={() => onNavigate(outfit.id)} className="snap-start flex-shrink-0 w-[85%] bg-white rounded-[2.2rem] shadow-lg overflow-hidden transition-all hover:scale-[1.01] cursor-pointer p-2 border border-slate-100">
+                        <div className="aspect-square rounded-[1.8rem] overflow-hidden relative">
+                          <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full h-full object-cover" />
+                          {outfit.temperature !== undefined && (
+                              <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-2 py-1 rounded-xl shadow-sm border border-white/50">
+                                  <p className="text-[10px] font-black text-slate-800 leading-none">{outfit.temperature}°C</p>
                               </div>
-                          </div>
+                          )}
                         </div>
-                        <div className="p-3 pt-4">
-                            <div className="flex flex-wrap gap-2">
+                        <div className="p-4">
+                            <div className="flex flex-wrap gap-1.5">
                                 {[...outfit.tops, ...outfit.bottoms].slice(0, 3).map(tag => (
-                                    <span key={tag} className="bg-sage-50 text-sage-700 text-[10px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full">{tag}</span>
+                                    <span key={tag} className="bg-slate-50 text-slate-500 text-[9px] font-black uppercase px-3 py-1 rounded-full">{tag}</span>
                                 ))}
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
-            {/* Arrows */}
             {showLeftArrow && (
-                <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur rounded-full w-10 h-10 flex items-center justify-center shadow-lg z-10 hover:bg-white text-charcoal opacity-0 group-hover/carousel:opacity-100 transition-opacity">
-                    <Icon name="chevron-left" className="w-5 h-5" />
+                <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 rounded-full w-8 h-8 flex items-center justify-center shadow-lg z-10 hover:bg-white text-slate-600">
+                    <Icon name="chevron-left" className="w-4 h-4" />
                 </button>
             )}
             {showRightArrow && outfits.length > 1 && (
-                <button onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur rounded-full w-10 h-10 flex items-center justify-center shadow-lg z-10 hover:bg-white text-charcoal opacity-0 group-hover/carousel:opacity-100 transition-opacity">
-                    <Icon name="chevron-right" className="w-5 h-5" />
+                <button onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 rounded-full w-8 h-8 flex items-center justify-center shadow-lg z-10 hover:bg-white text-slate-600">
+                    <Icon name="chevron-right" className="w-4 h-4" />
                 </button>
             )}
         </div>
@@ -110,18 +97,14 @@ const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => 
 };
 
 const AddOutfitPrompt: React.FC<{ onAdd: () => void }> = ({ onAdd }) => (
-  <div className="bg-white rounded-[2.5rem] p-8 text-center flex flex-col items-center justify-center min-h-[300px] border border-gray-100 shadow-sm relative overflow-hidden group">
-    {/* Decoration */}
-    <div className="absolute top-0 right-0 w-32 h-32 bg-sage-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-sage-100 transition-colors duration-700"></div>
-    
-    <div className="w-20 h-20 rounded-full bg-cream-50 flex items-center justify-center mb-6 border border-sage-100 relative z-10">
-      <Icon name="plus" className="w-8 h-8 text-sage-400" />
+  <div className="bg-white rounded-[2.5rem] shadow-sm p-8 text-center flex flex-col items-center justify-center min-h-[250px] border-2 border-dashed border-slate-200">
+    <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center mb-6">
+      <Icon name="plus" className="w-8 h-8 text-slate-300" />
     </div>
-    <h3 className="font-serif text-2xl text-charcoal mb-2">Nhật ký hôm nay</h3>
-    <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-8">Hãy lưu lại phong cách của bạn</p>
+    <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest mb-6">Chưa có nhật ký hôm nay</p>
     <button
       onClick={onAdd}
-      className="bg-sage-600 text-white font-bold py-4 px-10 rounded-full shadow-xl shadow-sage-200 active:scale-95 transition-all uppercase text-[10px] tracking-widest hover:bg-sage-700 relative z-10"
+      className="bg-indigo-600 text-white font-black py-4 px-10 rounded-2xl shadow-xl shadow-indigo-100 active:scale-95 transition-all uppercase text-[10px] tracking-widest"
     >
       Ghi lại ngay
     </button>
@@ -136,15 +119,15 @@ const FlashbackSection: React.FC<{
 }> = ({ title, outfits, fallbackMessage, onNavigate }) => {
   return (
     <div className="mt-12">
-      <div className="flex items-center justify-between mb-5 px-2">
-        <h2 className="font-serif text-xl text-charcoal italic">{title}</h2>
-        <div className="h-[1px] flex-1 bg-gray-200 ml-4"></div>
+      <div className="flex items-center gap-2 mb-4 px-2">
+        <Icon name="calendar" className="text-slate-400 w-3.5 h-3.5" />
+        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</h2>
       </div>
       {outfits.length > 0 ? (
         <OutfitCarousel outfits={outfits} onNavigate={onNavigate} />
       ) : (
-        <div className="bg-white/40 rounded-[2rem] p-8 text-center border border-dashed border-gray-300">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{fallbackMessage}</p>
+        <div className="bg-white/50 rounded-[2rem] p-6 text-center text-[10px] font-bold text-slate-400 border border-dashed border-slate-200 uppercase tracking-tighter">
+          {fallbackMessage}
         </div>
       )}
     </div>
@@ -197,33 +180,33 @@ export const HomeScreen: React.FC = () => {
 
   if (outfitsLoading && Object.keys(outfitsByDate).length === 0) {
       return (
-          <div className="p-4 md:p-6 pb-24 min-h-screen bg-cream-50 pt-12">
-              <div className="h-12 w-48 bg-gray-200 rounded mb-8 animate-pulse"></div>
-              <div className="h-28 w-full bg-gray-200 rounded-[2.2rem] mb-8 animate-pulse"></div>
-              <div className="h-[400px] w-full bg-gray-200 rounded-[2.2rem] animate-pulse"></div>
+          <div className="p-4 md:p-6 pb-24 min-h-screen bg-slate-50 pt-12">
+              <div className="h-12 w-48 bg-slate-200 rounded mb-8 animate-pulse"></div>
+              <div className="h-24 w-full bg-slate-200 rounded-[2.2rem] mb-8 animate-pulse"></div>
+              <div className="h-[400px] w-full bg-slate-200 rounded-[2.2rem] animate-pulse"></div>
           </div>
       );
   }
 
   return (
-    <div className="p-4 md:p-6 pb-32 min-h-screen bg-cream-50 pt-12">
-      <header className="flex justify-between items-center mb-10">
+    <div className="p-4 md:p-6 pb-24 min-h-screen bg-slate-50 pt-12">
+      <header className="flex justify-between items-start mb-8">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 flex-shrink-0 animate-scale-up border-2 border-white rounded-full shadow-md overflow-hidden bg-white">
+          <div className="w-12 h-12 flex-shrink-0 animate-scale-up">
             <img 
               src="https://raw.githubusercontent.com/thanhlv87/pic/refs/heads/main/fashion.png" 
               alt="Logo" 
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain drop-shadow-md"
             />
           </div>
           <div>
-            <h1 className="text-3xl font-serif text-charcoal leading-none mb-1">{timeGreeting},</h1>
-            <p className="text-sage-600 font-bold text-sm tracking-wide">{greetingName} ✨</p>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-0.5">{timeGreeting},</h1>
+            <p className="text-slate-500 font-bold text-base">{greetingName} ✨</p>
           </div>
         </div>
         <div className="flex gap-2">
           {user && !user.isAnonymous && (
-            <button onClick={logout} className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-gray-400 hover:text-red-500 active:scale-90 transition-all border border-gray-100">
+            <button onClick={logout} className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm text-red-500 active:scale-90 transition-all border border-slate-100">
               <Icon name="logout" className="w-4 h-4" />
             </button>
           )}
@@ -233,9 +216,9 @@ export const HomeScreen: React.FC = () => {
       <WeatherWidget weather={weather} loading={weatherLoading} />
 
       <main className="animate-fade-in">
-        <div className="flex items-center gap-2 mb-6 px-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-sage-600"></div>
-          <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">OUTFIT HÔM NAY</h2>
+        <div className="flex items-center gap-2 mb-4 px-2">
+          <Icon name="home" className="text-indigo-600 w-3.5 h-3.5" />
+          <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Trang phục hôm nay</h2>
         </div>
         
         {todaysOutfits.length > 0 ? (
@@ -245,15 +228,15 @@ export const HomeScreen: React.FC = () => {
         )}
         
         <FlashbackSection
-          title="Tuần trước"
+          title="Tuần trước vào ngày này"
           outfits={outfitsFromLastWeek}
-          fallbackMessage="Không có dữ liệu tuần trước"
+          fallbackMessage="Chưa có dữ liệu tuần trước"
           onNavigate={(id) => navigate(`/outfit/${id}`)}
         />
         <FlashbackSection
-          title="Tháng trước"
+          title="Tháng trước vào ngày này"
           outfits={outfitsFromLastMonth}
-          fallbackMessage="Không có dữ liệu tháng trước"
+          fallbackMessage="Chưa có dữ liệu tháng trước"
           onNavigate={(id) => navigate(`/outfit/${id}`)}
         />
       </main>

@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Outfit } from '../types';
-import { getOutfits, addOrUpdateOutfit as addOrUpdateOutfitService, deleteOutfit as deleteOutfitService, generateOutfitId } from '../services/firebaseService';
+import { getOutfits, addOrUpdateOutfit as addOrUpdateOutfitService, deleteOutfit as deleteOutfitService } from '../services/firebaseService';
 import { useAuth } from './useAuth';
 
 interface OutfitState {
@@ -68,72 +68,33 @@ export const OutfitProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const addOrUpdateOutfit = useCallback(async (outfitData: Omit<Outfit, 'imageUrls'> & { newImageFiles: string[], existingImageUrls: string[] }) => {
     if (!user) throw new Error("Cannot add/update outfit: User not authenticated");
-    
-    // 1. GENERATE ID & TEMP DATA (Optimistic UI)
-    const finalId = outfitData.id || generateOutfitId(user.uid);
-    // Kết hợp ảnh cũ (url) và ảnh mới (base64 string) để hiển thị ngay lập tức
-    const optimisticImageUrls = [...outfitData.existingImageUrls, ...outfitData.newImageFiles];
-    
-    const optimisticOutfit: Outfit = {
-        ...outfitData,
-        id: finalId,
-        imageUrls: optimisticImageUrls
-    };
-
-    // 2. UPDATE STATE IMMEDIATELY
-    setState(prevState => {
-        const newAllOutfits = { ...prevState.allOutfits, [finalId]: optimisticOutfit };
+    try {
+      const savedOutfit = await addOrUpdateOutfitService(user.uid, outfitData);
+      setState(prevState => {
+        const newAllOutfits = { ...prevState.allOutfits, [savedOutfit.id]: savedOutfit };
         const newOutfitsByDate = { ...prevState.outfitsByDate };
-        const dateId = optimisticOutfit.dateId;
+        const dateId = savedOutfit.dateId;
         const outfitsForDay = newOutfitsByDate[dateId] ? [...newOutfitsByDate[dateId]] : [];
-        
-        const existingIndex = outfitsForDay.findIndex(o => o.id === finalId);
+        const existingIndex = outfitsForDay.findIndex(o => o.id === savedOutfit.id);
         if (existingIndex > -1) {
-            outfitsForDay[existingIndex] = optimisticOutfit;
+            outfitsForDay[existingIndex] = savedOutfit;
         } else {
-            outfitsForDay.unshift(optimisticOutfit); // Add to top
+            outfitsForDay.push(savedOutfit);
         }
-        
-        // Sort lại cho chắc chắn
         outfitsForDay.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         newOutfitsByDate[dateId] = outfitsForDay;
-        
         return { ...prevState, allOutfits: newAllOutfits, outfitsByDate: newOutfitsByDate, error: null };
-    });
-
-    // 3. SYNC TO SERVER IN BACKGROUND
-    // Lưu ý: Chúng ta không 'await' ở đây để chặn UI, nhưng function này vẫn trả về Promise
-    // để component có thể biết khi nào *thực sự* xong nếu cần (nhưng UI đã chuyển trang rồi).
-    
-    try {
-        const savedOutfit = await addOrUpdateOutfitService(user.uid, { ...outfitData, id: finalId });
-        
-        // 4. UPDATE STATE WITH REAL SERVER DATA (Optional but good for consistency)
-        // Khi upload xong, ảnh base64 sẽ được thay thế bằng URL thật từ server (nếu logic upload nằm trong service)
-        // Tuy nhiên ở app này chúng ta đang lưu base64 trực tiếp vào firestore (theo code cũ),
-        // nên data local và server là giống nhau. Bước này giúp đồng bộ ID hoặc các field server-side khác.
-        setState(prevState => {
-             const newAllOutfits = { ...prevState.allOutfits, [savedOutfit.id]: savedOutfit };
-             // Cập nhật lại list nếu cần thiết, nhưng thường Optimistic data đã đủ tốt.
-             return { ...prevState, allOutfits: newAllOutfits };
-        });
-
+      });
     } catch (error) {
-        console.error("Failed to save outfit in background:", error);
-        // Rollback state if needed, or show error toast
-        // Trong app đơn giản, ta có thể chấp nhận rủi ro nhỏ hoặc hiện thông báo lỗi sau.
-        setState(prev => ({ ...prev, error: error as Error }));
-        throw error;
+      console.error("Failed to save outfit in hook:", error);
+      throw error;
     }
   }, [user]);
 
   const deleteOutfit = useCallback(async (outfit: Outfit) => {
     if (!user) throw new Error("Cannot delete outfit: User not authenticated");
     const { id, dateId } = outfit;
-    
     const previousState = state;
-
-    // Optimistic Delete
     setState(prevState => {
         const newAllOutfits = { ...prevState.allOutfits };
         delete newAllOutfits[id];
@@ -144,11 +105,9 @@ export const OutfitProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
         return { ...prevState, allOutfits: newAllOutfits, outfitsByDate: newOutfitsByDate, error: null };
     });
-
     try {
       await deleteOutfitService(user.uid, id);
     } catch (error) {
-      // Revert if failed
       setState(previousState);
       throw error;
     }

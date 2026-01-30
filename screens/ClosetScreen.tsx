@@ -301,17 +301,11 @@ export const ClosetScreen: React.FC = () => {
                     <p className="text-slate-400 font-black uppercase text-[10px] text-center px-10 leading-loose">Danh mục này đang trống. Hãy thêm đồ ngay!</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-2 gap-5 animate-fade-in pb-24 render-auto">
+                <div className="grid grid-cols-2 gap-5 animate-fade-in pb-24">
                     {filteredItems.map(item => (
                         <div key={item.id} className="group relative bg-white p-2.5 rounded-[2.2rem] shadow-sm border border-slate-100 hover:shadow-xl transition-all">
                             <div className="aspect-[3/4] rounded-[1.8rem] overflow-hidden bg-slate-50 relative flex items-center justify-center p-3">
-                                <img 
-                                    src={item.imageUrl} 
-                                    alt="Cloth" 
-                                    loading="lazy"
-                                    decoding="async"
-                                    className="w-full h-full object-contain" 
-                                />
+                                <img src={item.imageUrl} className="w-full h-full object-contain" alt="Cloth" />
                                 <button 
                                     onClick={() => setItemToDelete(item)} 
                                     className="absolute top-3 right-3 p-2.5 bg-white/90 text-red-500 rounded-xl opacity-0 group-hover:opacity-100 transition-all shadow-lg"

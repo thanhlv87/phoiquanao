@@ -7,7 +7,7 @@ import { getStorage } from "@firebase/storage";
 
 // IMPORTANT: Replace this with your app's Firebase project configuration.
 const firebaseConfig = {
-  apiKey: "AIzaSyD4Qpa7UV_4DB-C-SVbG8Ulze5Xpxvg-pg",
+  apiKey: "AIzaSyBZVwlKbEo1to-1yzlhMu-LjPondnFszzQ",
   authDomain: "phoiquanao.firebaseapp.com",
   projectId: "phoiquanao",
   storageBucket: "phoiquanao.firebasestorage.app",

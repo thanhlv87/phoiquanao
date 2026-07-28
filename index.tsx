@@ -12,7 +12,7 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <HashRouter>
+    <HashRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
       <App />
     </HashRouter>
   </React.StrictMode>

@@ -44,3 +44,54 @@ describe('formatDate', () => {
     expect(formatDate(new Date(2026, 7, 25))).toContain('25');
   });
 });
+
+describe('previousDateIds', () => {
+  it('trả về đúng số ngày, gần nhất đứng đầu, không gồm hôm nay', async () => {
+    const { previousDateIds } = await import('../utils/dateUtils');
+    const ids = previousDateIds(new Date(2026, 7, 25), 7);
+    expect(ids).toEqual([
+      '2026-08-24', '2026-08-23', '2026-08-22', '2026-08-21',
+      '2026-08-20', '2026-08-19', '2026-08-18',
+    ]);
+    expect(ids).not.toContain('2026-08-25');
+  });
+
+  it('lùi qua ranh giới tháng', async () => {
+    const { previousDateIds } = await import('../utils/dateUtils');
+    expect(previousDateIds(new Date(2026, 2, 2), 3)).toEqual(['2026-03-01', '2026-02-28', '2026-02-27']);
+  });
+
+  it('lùi qua ranh giới năm', async () => {
+    const { previousDateIds } = await import('../utils/dateUtils');
+    expect(previousDateIds(new Date(2026, 0, 2), 3)).toEqual(['2026-01-01', '2025-12-31', '2025-12-30']);
+  });
+
+  it('xử lý đúng năm nhuận', async () => {
+    const { previousDateIds } = await import('../utils/dateUtils');
+    // 2028 là năm nhuận -> phải có 29/02
+    expect(previousDateIds(new Date(2028, 2, 1), 2)).toEqual(['2028-02-29', '2028-02-28']);
+    // 2026 không nhuận -> nhảy thẳng qua 28/02
+    expect(previousDateIds(new Date(2026, 2, 1), 2)).toEqual(['2026-02-28', '2026-02-27']);
+  });
+
+  it('không bị giờ trong ngày làm lệch', async () => {
+    const { previousDateIds } = await import('../utils/dateUtils');
+    const sang = previousDateIds(new Date(2026, 7, 25, 0, 30), 2);
+    const toi = previousDateIds(new Date(2026, 7, 25, 23, 45), 2);
+    expect(sang).toEqual(toi);
+  });
+
+  it('count = 0 trả về mảng rỗng', async () => {
+    const { previousDateIds } = await import('../utils/dateUtils');
+    expect(previousDateIds(new Date(2026, 7, 25), 0)).toEqual([]);
+  });
+});
+
+describe('relativeDayLabel', () => {
+  it('gọi 1 ngày trước là "Hôm qua"', async () => {
+    const { relativeDayLabel } = await import('../utils/dateUtils');
+    expect(relativeDayLabel(1)).toBe('Hôm qua');
+    expect(relativeDayLabel(2)).toBe('2 ngày trước');
+    expect(relativeDayLabel(7)).toBe('7 ngày trước');
+  });
+});

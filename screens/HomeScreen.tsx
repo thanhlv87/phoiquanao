@@ -10,6 +10,7 @@ import { Outfit } from '../types';
 import { SearchSheet } from '../components/SearchSheet';
 import { StatsSheet } from '../components/StatsSheet';
 import { AccountSheet } from '../components/AccountSheet';
+import { RecentlyWorn } from '../components/RecentlyWorn';
 
 const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => void }> = ({ outfits, onNavigate }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -194,6 +195,11 @@ export const HomeScreen: React.FC = () => {
           <AddOutfitPrompt onAdd={() => navigate(`/add-outfit/${todayId}`)} />
         )}
         
+        <RecentlyWorn
+          outfitsByDate={outfitsByDate}
+          onNavigate={(id) => navigate(`/outfit/${id}`)}
+        />
+
         <FlashbackSection
           title="Tuần trước vào ngày này"
           outfits={outfitsFromLastWeek}

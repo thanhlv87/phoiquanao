@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { useOutfits } from '../hooks/useOutfits';
 import { Icon } from '../components/Icon';
 import { Outfit } from '../types';
+import { parseDateString } from '../utils/dateUtils';
 
 interface TagCount {
     tag: string;
@@ -131,9 +132,10 @@ export const StatisticsScreen: React.FC = () => {
     const stats = useMemo(() => {
         let outfits = Object.values(allOutfits) as Outfit[];
         
-        // Filter for Year View only
+        // Thống kê theo ngày MẶC (dateId), không theo thời điểm tạo bản ghi:
+        // ghi bù cho hôm qua vẫn phải tính vào hôm qua.
         if (activeTab === 'year') {
-            outfits = outfits.filter(o => new Date(o.date).getFullYear() === currentYear);
+            outfits = outfits.filter(o => parseDateString(o.dateId).getFullYear() === currentYear);
         }
 
         const totalOutfits = outfits.length;
@@ -151,13 +153,9 @@ export const StatisticsScreen: React.FC = () => {
             outfit.bottoms.forEach(t => bottomCounts[t] = (bottomCounts[t] || 0) + 1);
             outfit.tags.forEach(t => styleCounts[t] = (styleCounts[t] || 0) + 1);
             
-            const date = new Date(outfit.date);
+            const date = parseDateString(outfit.dateId);
             dayCounts[date.getDay()]++;
-            
-            // Only count months for the current active view logic
-            if (activeTab === 'year' || true) {
-                 monthCounts[date.getMonth()]++;
-            }
+            monthCounts[date.getMonth()]++;
         });
 
         const processCounts = (counts: Record<string, number>): TagCount[] => {

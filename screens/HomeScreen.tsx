@@ -4,38 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useOutfits } from '../hooks/useOutfits';
 import { useAuth } from '../hooks/useAuth';
 import { getTodayDateString } from '../utils/dateUtils';
-import { fetchLocalWeather, WeatherData } from '../services/weatherService';
 import { Icon } from '../components/Icon';
 import { Outfit } from '../types';
-
-const WeatherWidget: React.FC<{ weather: WeatherData | null; loading: boolean }> = ({ weather, loading }) => {
-  if (loading && !weather) {
-    return (
-      <div className="bg-white/80 backdrop-blur-md rounded-[2.2rem] p-5 mb-8 h-24 shadow-sm border border-white/50 animate-pulse"></div>
-    );
-  }
-  if (!weather) return null;
-  return (
-    <div className="bg-white/95 backdrop-blur-md rounded-[2.2rem] p-5 mb-8 flex items-center justify-between shadow-sm border border-white/50 animate-fade-in">
-      <div className="flex items-center gap-4 min-w-0">
-        <div className="w-11 h-11 bg-indigo-50 rounded-2xl flex items-center justify-center text-xl shadow-inner flex-shrink-0">
-          {weather.isRaining ? '🌧️' : weather.temp > 28 ? '☀️' : '☁️'}
-        </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <Icon name="search" className="w-3 h-3 text-indigo-500" strokeWidth="2.5" />
-            <p className="text-[10px] font-black uppercase text-indigo-600 tracking-wider truncate">{weather.city}</p>
-          </div>
-          <p className="text-sm font-bold text-slate-800 leading-tight truncate">{weather.condition}</p>
-        </div>
-      </div>
-      <div className="text-right flex-shrink-0 ml-4">
-        <p className="text-2xl font-black text-slate-900 leading-none mb-1">{weather.temp}°</p>
-        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Hiện tại</p>
-      </div>
-    </div>
-  );
-};
 
 const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => void }> = ({ outfits, onNavigate }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -63,14 +33,9 @@ const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => 
         <div className="relative">
             <div ref={scrollContainerRef} onScroll={handleScroll} className="flex space-x-4 overflow-x-auto snap-x snap-mandatory pb-4 scrollbar-hide px-1">
                 {outfits.map((outfit) => (
-                    <div key={outfit.id} onClick={() => onNavigate(outfit.id)} className="snap-start flex-shrink-0 w-[85%] bg-white rounded-[2.2rem] shadow-lg overflow-hidden transition-all hover:scale-[1.01] cursor-pointer p-2 border border-slate-100">
+                    <button type="button" key={outfit.id} onClick={() => onNavigate(outfit.id)} className="snap-start flex-shrink-0 w-[85%] text-left bg-white rounded-[2.2rem] shadow-lg overflow-hidden transition-all hover:scale-[1.01] cursor-pointer p-2 border border-slate-100">
                         <div className="aspect-square rounded-[1.8rem] overflow-hidden relative">
-                          <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full h-full object-cover" />
-                          {outfit.temperature !== undefined && (
-                              <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-2 py-1 rounded-xl shadow-sm border border-white/50">
-                                  <p className="text-[10px] font-black text-slate-800 leading-none">{outfit.temperature}°C</p>
-                              </div>
-                          )}
+                          <img src={outfit.imageUrls[0]} alt="" className="w-full h-full object-cover" />
                         </div>
                         <div className="p-4">
                             <div className="flex flex-wrap gap-1.5">
@@ -79,16 +44,16 @@ const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => 
                                 ))}
                             </div>
                         </div>
-                    </div>
+                    </button>
                 ))}
             </div>
             {showLeftArrow && (
-                <button onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 rounded-full w-8 h-8 flex items-center justify-center shadow-lg z-10 hover:bg-white text-slate-600">
+                <button type="button" aria-label="Cuộn sang trái" onClick={() => scroll('left')} className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 rounded-full w-8 h-8 flex items-center justify-center shadow-lg z-10 hover:bg-white text-slate-600">
                     <Icon name="chevron-left" className="w-4 h-4" />
                 </button>
             )}
             {showRightArrow && outfits.length > 1 && (
-                <button onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 rounded-full w-8 h-8 flex items-center justify-center shadow-lg z-10 hover:bg-white text-slate-600">
+                <button type="button" aria-label="Cuộn sang phải" onClick={() => scroll('right')} className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 rounded-full w-8 h-8 flex items-center justify-center shadow-lg z-10 hover:bg-white text-slate-600">
                     <Icon name="chevron-right" className="w-4 h-4" />
                 </button>
             )}
@@ -139,17 +104,6 @@ export const HomeScreen: React.FC = () => {
   const { state } = useOutfits();
   const { user, logout } = useAuth();
   const { outfitsByDate, loading: outfitsLoading } = state;
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [weatherLoading, setWeatherLoading] = useState(true);
-
-  useEffect(() => {
-    setWeatherLoading(true);
-    fetchLocalWeather().then(data => {
-      setWeather(data);
-      setWeatherLoading(false);
-    });
-  }, []);
-
   const todayId = getTodayDateString();
   const todaysOutfits = outfitsByDate[todayId] || [];
 
@@ -206,14 +160,12 @@ export const HomeScreen: React.FC = () => {
         </div>
         <div className="flex gap-2">
           {user && !user.isAnonymous && (
-            <button onClick={logout} className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm text-red-500 active:scale-90 transition-all border border-slate-100">
+            <button type="button" aria-label="Đăng xuất" onClick={logout} className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm text-red-500 active:scale-90 transition-all border border-slate-100">
               <Icon name="logout" className="w-4 h-4" />
             </button>
           )}
         </div>
       </header>
-
-      <WeatherWidget weather={weather} loading={weatherLoading} />
 
       <main className="animate-fade-in">
         <div className="flex items-center gap-2 mb-4 px-2">

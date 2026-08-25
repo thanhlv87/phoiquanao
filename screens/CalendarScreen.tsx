@@ -32,12 +32,7 @@ const OutfitDetailModal: React.FC<{ outfit: Outfit; onClose: () => void; onUpdat
                     ) : (
                         <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full aspect-square object-cover" />
                     )}
-                    <button onClick={onClose} className="absolute top-4 right-4 bg-white/90 text-slate-900 rounded-full w-10 h-10 flex items-center justify-center text-xl shadow-lg">&times;</button>
-                    {outfit.temperature !== undefined && (
-                        <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md text-white px-3 py-1.5 rounded-2xl text-xs font-black shadow-lg">
-                            🌡️ {outfit.temperature}°C {outfit.weatherCondition ? `• ${outfit.weatherCondition}` : ''}
-                        </div>
-                    )}
+                    <button type="button" aria-label="Đóng" onClick={onClose} className="absolute top-4 right-4 bg-white/90 text-slate-900 rounded-full w-10 h-10 flex items-center justify-center text-xl shadow-lg">&times;</button>
                 </div>
 
                 <div className="p-6 overflow-y-auto">
@@ -91,7 +86,7 @@ const OutfitPreview: React.FC<{
                     <h2 className="text-xl font-black text-slate-800 tracking-tight">{formatDate(date)}</h2>
                     <p className="text-xs text-slate-400 font-bold uppercase">{outfits.length} BỘ TRANG PHỤC</p>
                 </div>
-                <button onClick={() => onAddOutfit(dateId)} className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-100 active:scale-90 transition-all">
+                <button type="button" aria-label="Thêm trang phục cho ngày này" onClick={() => onAddOutfit(dateId)} className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-100 active:scale-90 transition-all">
                     <Icon name="plus" className="w-6 h-6" />
                 </button>
             </div>
@@ -104,19 +99,14 @@ const OutfitPreview: React.FC<{
             ) : (
                 <div className="grid grid-cols-2 gap-4">
                     {outfits.map(outfit => (
-                        <div key={outfit.id} onClick={() => onSelectOutfit(outfit)} className="bg-white p-2 rounded-[2rem] shadow-sm border border-slate-50 cursor-pointer hover:shadow-xl transition-all active:scale-95">
+                        <button type="button" key={outfit.id} onClick={() => onSelectOutfit(outfit)} className="text-left bg-white p-2 rounded-[2rem] shadow-sm border border-slate-50 cursor-pointer hover:shadow-xl transition-all active:scale-95">
                             <div className="aspect-square bg-slate-100 rounded-[1.5rem] overflow-hidden mb-2 relative">
-                                <img src={outfit.imageUrls[0]} alt="Preview" className="w-full h-full object-cover" />
-                                {outfit.temperature !== undefined && (
-                                    <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white px-1.5 py-0.5 rounded-lg text-[8px] font-black">
-                                        {outfit.temperature}°C
-                                    </div>
-                                )}
+                                <img src={outfit.imageUrls[0]} alt="" className="w-full h-full object-cover" />
                             </div>
                             <div className="px-2 pb-1">
                                 <p className="text-[10px] font-black uppercase text-indigo-600 truncate">{outfit.tops[0] || 'Phối đồ'}</p>
                             </div>
-                        </div>
+                        </button>
                     ))}
                 </div>
             )}
@@ -156,13 +146,15 @@ export const CalendarScreen: React.FC = () => {
       const outfitsForDay = outfitsByDate[dateId] || [];
       const hasOutfit = outfitsForDay.length > 0;
       const isSelected = dateId === selectedDateId;
+      // So sánh cả năm, nếu không thì cùng ngày/tháng ở năm khác cũng bị tô sáng.
+      const isToday = dateId === todayId;
 
       grid.push(
-        <div key={dateId} onClick={() => handleDayClick(dateId)} className="relative aspect-square cursor-pointer">
+        <button type="button" key={dateId} aria-label={`Ngày ${day}, ${outfitsForDay.length} trang phục`} aria-pressed={isSelected} onClick={() => handleDayClick(dateId)} className="relative aspect-square cursor-pointer">
           <div className={`w-full h-full rounded-2xl flex items-center justify-center transition-all duration-300 ${isSelected ? 'ring-2 ring-indigo-500 bg-indigo-50 shadow-md scale-105 z-10' : ''}`}>
             {hasOutfit ? (
               <div className="w-full h-full rounded-2xl overflow-hidden relative">
-                <img src={outfitsForDay[0].imageUrls[0]} alt="Outfit" className="w-full h-full object-cover opacity-80" />
+                <img src={outfitsForDay[0].imageUrls[0]} alt="" className="w-full h-full object-cover opacity-80" />
                 <div className="absolute inset-0 bg-black/10"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
                     <span className="text-white font-black text-sm drop-shadow-md">{day}</span>
@@ -174,16 +166,16 @@ export const CalendarScreen: React.FC = () => {
                 )}
               </div>
             ) : (
-              <div className={`w-full h-full rounded-2xl flex items-center justify-center hover:bg-slate-100 ${day === today.getDate() && currentMonth === today.getMonth() ? 'border-2 border-indigo-200' : ''}`}>
-                <span className={`text-sm font-bold ${day === today.getDate() && currentMonth === today.getMonth() ? 'text-indigo-600' : 'text-slate-400'}`}>{day}</span>
+              <div className={`w-full h-full rounded-2xl flex items-center justify-center hover:bg-slate-100 ${isToday ? 'border-2 border-indigo-200' : ''}`}>
+                <span className={`text-sm font-bold ${isToday ? 'text-indigo-600' : 'text-slate-400'}`}>{day}</span>
               </div>
             )}
           </div>
-        </div>
+        </button>
       );
     }
     return grid;
-  }, [currentYear, currentMonth, outfitsByDate, handleDayClick, selectedDateId]);
+  }, [currentYear, currentMonth, outfitsByDate, handleDayClick, selectedDateId, todayId]);
 
   return (
     <div className="flex flex-col h-screen bg-slate-50">
@@ -197,7 +189,7 @@ export const CalendarScreen: React.FC = () => {
       
       <header className="p-6 bg-white rounded-b-[40px] shadow-sm pt-14">
         <div className="flex justify-between items-center px-2 mb-2">
-          <button onClick={handlePrevMonth} className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors">
+          <button type="button" aria-label="Tháng trước" onClick={handlePrevMonth} className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors">
             <Icon name="chevron-left" className="w-5 h-5 text-slate-600" />
           </button>
           <div className="text-center">
@@ -206,7 +198,7 @@ export const CalendarScreen: React.FC = () => {
             </h2>
             <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{currentYear}</p>
           </div>
-          <button onClick={handleNextMonth} className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors">
+          <button type="button" aria-label="Tháng sau" onClick={handleNextMonth} className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors">
             <Icon name="chevron-right" className="w-5 h-5 text-slate-600" />
           </button>
         </div>

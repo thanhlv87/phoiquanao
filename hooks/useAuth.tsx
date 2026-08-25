@@ -4,10 +4,6 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import {
   onAuthStateChanged,
   signOut,
-  GoogleAuthProvider,
-  signInWithRedirect,
-  linkWithRedirect,
-  getRedirectResult,
   User,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -24,7 +20,6 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string | null;
-  loginWithGoogle: () => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   loginAnonymously: () => Promise<void>;
@@ -64,13 +59,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Process redirect results first thing on load
-    getRedirectResult(auth)
-      .catch((err: FirebaseError) => {
-        console.error("Error from getRedirectResult:", err);
-        setError(getFriendlyErrorMessage(err.code));
-      });
-
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
@@ -78,28 +66,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     return () => unsubscribe();
   }, []);
-
-  const loginWithGoogle = async () => {
-    setError(null);
-    const provider = new GoogleAuthProvider();
-    const currentUser = auth.currentUser;
-
-    try {
-        if (currentUser && currentUser.isAnonymous) {
-          await linkWithRedirect(currentUser, provider);
-        } else {
-          await signInWithRedirect(auth, provider);
-        }
-    } catch (err) {
-        console.error("Error initiating Google Sign-In:", err);
-        if (err instanceof FirebaseError) {
-            setError(getFriendlyErrorMessage(err.code));
-        } else {
-            setError('Đã xảy ra lỗi không mong muốn khi bắt đầu đăng nhập.');
-        }
-        throw err;
-    }
-  };
 
   const signUpWithEmail = async (email: string, password: string) => {
     setError(null);
@@ -158,9 +124,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const clearError = () => setError(null);
 
-  const value = { user, loading, loginWithGoogle, signUpWithEmail, signInWithEmail, loginAnonymously, logout, error, clearError };
+  const value = { user, loading, signUpWithEmail, signInWithEmail, loginAnonymously, logout, error, clearError };
 
-  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
+  // Vẫn render children khi đang loading để phía dưới tự quyết định hiển thị gì
+  // (AppContent dựng skeleton); chặn ở đây thì màn hình chỉ trắng trơn.
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

@@ -1,16 +1,20 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { HomeScreen } from './screens/HomeScreen';
-import { CalendarScreen } from './screens/CalendarScreen';
-import { AddOutfitScreen } from './screens/AddOutfitScreen';
 import { AuthScreen } from './screens/AuthScreen';
-import { CollectionsScreen } from './screens/CollectionsScreen';
-import { CollectionDetailScreen } from './screens/CollectionDetailScreen';
 import { BottomNav } from './components/BottomNav';
 import { OutfitProvider } from './hooks/useOutfits';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { CollectionProvider } from './hooks/useCollections';
+
+// Chỉ Home + Auth nằm trong bundle khởi động; các màn còn lại tải theo nhu cầu.
+const CalendarScreen = lazy(() => import('./screens/CalendarScreen').then(m => ({ default: m.CalendarScreen })));
+const AddOutfitScreen = lazy(() => import('./screens/AddOutfitScreen').then(m => ({ default: m.AddOutfitScreen })));
+const CollectionsScreen = lazy(() => import('./screens/CollectionsScreen').then(m => ({ default: m.CollectionsScreen })));
+const CollectionDetailScreen = lazy(() => import('./screens/CollectionDetailScreen').then(m => ({ default: m.CollectionDetailScreen })));
+const SearchScreen = lazy(() => import('./screens/SearchScreen').then(m => ({ default: m.SearchScreen })));
+const StatisticsScreen = lazy(() => import('./screens/StatisticsScreen').then(m => ({ default: m.StatisticsScreen })));
 
 const HomeSkeleton: React.FC = () => (
   <div className="p-4 md:p-6 min-h-screen bg-slate-50 animate-pulse">
@@ -73,9 +77,15 @@ const AuthenticatedLayout: React.FC<{ children: React.ReactNode }> = ({ children
 
 function AppContent() {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const isAuthPage = location.pathname === '/auth';
   const showNav = !isAuthPage && user;
+
+  // Chờ Firebase khôi phục phiên đăng nhập. Gate ở đây thay vì trong AuthProvider
+  // để có skeleton, và để /auth không loé lên với người đã đăng nhập.
+  if (loading) {
+    return <HomeSkeleton />;
+  }
 
   return (
     <div className="max-w-lg mx-auto bg-slate-50 min-h-screen font-sans shadow-2xl relative">
@@ -87,15 +97,19 @@ function AppContent() {
             path="/*"
             element={
               <AuthenticatedLayout>
-                <Routes>
-                  <Route path="/" element={<HomeScreen />} />
-                  <Route path="/calendar" element={<CalendarScreen />} />
-                  <Route path="/collections" element={<CollectionsScreen />} />
-                  <Route path="/collection/:collectionId" element={<CollectionDetailScreen />} />
-                  <Route path="/add-outfit/:date" element={<AddOutfitScreen />} />
-                  <Route path="/outfit/:outfitId" element={<AddOutfitScreen />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+                <Suspense fallback={<HomeSkeleton />}>
+                  <Routes>
+                    <Route path="/" element={<HomeScreen />} />
+                    <Route path="/calendar" element={<CalendarScreen />} />
+                    <Route path="/search" element={<SearchScreen />} />
+                    <Route path="/statistics" element={<StatisticsScreen />} />
+                    <Route path="/collections" element={<CollectionsScreen />} />
+                    <Route path="/collection/:collectionId" element={<CollectionDetailScreen />} />
+                    <Route path="/add-outfit/:date" element={<AddOutfitScreen />} />
+                    <Route path="/outfit/:outfitId" element={<AddOutfitScreen />} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </Suspense>
               </AuthenticatedLayout>
             }
           />

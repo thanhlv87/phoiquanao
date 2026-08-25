@@ -3,11 +3,9 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOutfits } from '../hooks/useOutfits';
 import { useTagSuggestions } from '../hooks/useTagSuggestions';
-import { generateTagsFromImage } from '../services/geminiService';
-import { fetchLocalWeather } from '../services/weatherService';
-import { parseDateString, formatDate, getTodayDateString } from '../utils/dateUtils';
+import { useCollections } from '../hooks/useCollections';
+import { parseDateString, formatDate } from '../utils/dateUtils';
 import { Icon } from '../components/Icon';
-import { AiTags, Outfit } from '../types';
 import { compressImage } from '../utils/imageCompression';
 
 // --- Modal Component ---
@@ -112,6 +110,7 @@ export const AddOutfitScreen: React.FC = () => {
   const { date: dateParam, outfitId } = useParams<{ date?: string; outfitId?: string }>();
   const { state, addOrUpdateOutfit, deleteOutfit } = useOutfits();
   const { suggestions, addSuggestion } = useTagSuggestions();
+  const { state: collectionState } = useCollections();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [id, setId] = useState<string>('');
@@ -120,16 +119,12 @@ export const AddOutfitScreen: React.FC = () => {
   const [tops, setTops] = useState<string[]>([]);
   const [bottoms, setBottoms] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
-  
-  // Weather states
-  const [temp, setTemp] = useState<number | undefined>(undefined);
-  const [condition, setCondition] = useState<string | undefined>(undefined);
-  
+  const [collectionIds, setCollectionIds] = useState<string[]>([]);
+
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const isEditMode = !!outfitId;
@@ -144,27 +139,15 @@ export const AddOutfitScreen: React.FC = () => {
   }, [dateParam, existingOutfit, isEditMode]);
 
   useEffect(() => {
-    if (isEditMode && existingOutfit) {
-      setId(existingOutfit.id);
-      setImages(existingOutfit.imageUrls);
-      setTops(existingOutfit.tops);
-      setBottoms(existingOutfit.bottoms);
-      setTags(existingOutfit.tags);
-      setTemp(existingOutfit.temperature);
-      setCondition(existingOutfit.weatherCondition);
-    } else {
-      // Auto-fetch weather for new entries if date is today
-      const todayStr = getTodayDateString();
-      if (dateParam === todayStr || !dateParam) {
-        fetchLocalWeather().then(weather => {
-          if (weather) {
-            setTemp(weather.temp);
-            setCondition(weather.condition);
-          }
-        });
-      }
-    }
-  }, [existingOutfit, isEditMode, dateParam]);
+    // Chưa tải xong danh sách outfit thì chưa có gì để đổ vào form.
+    if (!isEditMode || !existingOutfit) return;
+    setId(existingOutfit.id);
+    setImages(existingOutfit.imageUrls);
+    setTops(existingOutfit.tops);
+    setBottoms(existingOutfit.bottoms);
+    setTags(existingOutfit.tags);
+    setCollectionIds(existingOutfit.collectionIds || []);
+  }, [existingOutfit, isEditMode]);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -172,7 +155,7 @@ export const AddOutfitScreen: React.FC = () => {
       setError(null);
       try {
         const compressedFiles = await Promise.all(
-          files.map((file: File) => compressImage(file, { maxWidth: 1080, quality: 0.7 }))
+          files.map((file: File) => compressImage(file, { maxWidth: 1080, quality: 0.7, maxBytes: 250 * 1024 }))
         );
         setNewImageFiles(prev => [...prev, ...compressedFiles]);
       } catch (err) {
@@ -190,31 +173,12 @@ export const AddOutfitScreen: React.FC = () => {
     }
   };
 
-  const handleGenerateTags = async () => {
-    const firstImage = images[0] || newImageFiles[0] || null;
-    if (!firstImage) {
-      setError("Vui lòng chọn hình ảnh trước.");
-      return;
-    }
-
-    setIsGenerating(true);
-    setError(null);
-    try {
-      const aiTags: AiTags = await generateTagsFromImage(firstImage);
-      setTops(prev => [...new Set([...prev, ...aiTags.tops])]);
-      setBottoms(prev => [...new Set([...prev, ...aiTags.bottoms])]);
-      setTags(prev => [...new Set([...prev, ...aiTags.general])]);
-      
-      aiTags.tops.forEach(t => addSuggestion('tops', t));
-      aiTags.bottoms.forEach(t => addSuggestion('bottoms', t));
-      aiTags.general.forEach(t => addSuggestion('tags', t));
-
-    } catch (error) {
-      console.error("Error generating tags:", error);
-      setError("AI đang bận. Vui lòng thử lại.");
-    } finally {
-      setIsGenerating(false);
-    }
+  const toggleCollection = (collectionId: string) => {
+    setCollectionIds(prev =>
+      prev.includes(collectionId)
+        ? prev.filter(cid => cid !== collectionId)
+        : [...prev, collectionId]
+    );
   };
 
   const handleSave = async () => {
@@ -230,15 +194,18 @@ export const AddOutfitScreen: React.FC = () => {
 
     const outfitData = {
       id,
-      date: new Date().toISOString(),
+      // Giữ nguyên thời điểm ghi ban đầu khi sửa, nếu không mỗi lần sửa một bộ
+      // đồ cũ sẽ đẩy nó lên hiện tại và làm sai thứ tự lẫn thống kê.
+      date: existingOutfit?.date || new Date().toISOString(),
       dateId,
       newImageFiles,
       existingImageUrls: images,
+      // Ảnh người dùng đã gỡ khỏi form: xóa khỏi Storage sau khi lưu xong.
+      removedImageUrls: (existingOutfit?.imageUrls || []).filter(url => !images.includes(url)),
       tops,
       bottoms,
       tags,
-      temperature: temp,
-      weatherCondition: condition
+      collectionIds,
     };
 
     try {
@@ -283,9 +250,38 @@ export const AddOutfitScreen: React.FC = () => {
   }, []);
 
   const allImages = useMemo(() => [
-    ...images.map(url => ({ type: 'existing', src: url })),
-    ...newImageFiles.map(fileStr => ({ type: 'new', src: fileStr }))
+    ...images.map((url, index) => ({ type: 'existing' as const, src: url, index })),
+    ...newImageFiles.map((fileStr, index) => ({ type: 'new' as const, src: fileStr, index }))
   ], [images, newImageFiles]);
+
+  const allCollections = useMemo(
+    () => Object.values(collectionState.collections),
+    [collectionState.collections]
+  );
+
+  // Mở thẳng /outfit/:id (F5 hoặc deep link) khi danh sách outfit chưa tải xong
+  // thì form rỗng và `id` vẫn là chuỗi rỗng -> bấm Lưu sẽ tạo bản ghi MỚI thay vì
+  // sửa. Chặn render form cho tới khi biết chắc outfit có tồn tại hay không.
+  if (isEditMode && !existingOutfit && !isDeleting) {
+    if (state.loading) {
+      return (
+        <div className="p-4 md:p-6 min-h-screen bg-slate-50 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+        </div>
+      );
+    }
+    return (
+      <div className="p-4 md:p-6 min-h-screen bg-slate-50 flex flex-col items-center justify-center text-center">
+        <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest mb-6">Không tìm thấy trang phục này</p>
+        <button
+          onClick={() => navigate('/')}
+          className="bg-indigo-600 text-white font-black py-4 px-10 rounded-2xl shadow-xl shadow-indigo-100 active:scale-95 transition-all uppercase text-[10px] tracking-widest"
+        >
+          Về trang chủ
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6 pb-20 bg-slate-50 min-h-screen">
@@ -297,16 +293,11 @@ export const AddOutfitScreen: React.FC = () => {
       )}
 
       <header className="flex items-center justify-between mb-6">
-        <button onClick={() => navigate(-1)} className="p-2 rounded-2xl bg-white shadow-sm border border-slate-100 active:scale-90 transition-all">
+        <button type="button" aria-label="Quay lại" onClick={() => navigate(-1)} className="p-2 rounded-2xl bg-white shadow-sm border border-slate-100 active:scale-90 transition-all">
           <Icon name="back" className="w-5 h-5 text-slate-700" />
         </button>
         <div className="text-center">
             <h1 className="text-xl font-black text-slate-800 tracking-tight leading-tight">{formatDate(date)}</h1>
-            {temp !== undefined && (
-                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mt-0.5">
-                    {temp}°C {condition ? `• ${condition}` : ''}
-                </p>
-            )}
         </div>
         <div className="w-10"></div>
       </header>
@@ -315,51 +306,73 @@ export const AddOutfitScreen: React.FC = () => {
         <input type="file" accept="image/*" multiple ref={fileInputRef} onChange={handleImageChange} className="hidden" />
 
         <div className="grid grid-cols-3 gap-3 mb-6">
-            {allImages.map(({ type, src }, index) => (
-                <div key={index} className="relative group aspect-square">
+            {allImages.map(({ type, src, index }) => (
+                <div key={`${type}-${index}`} className="relative group aspect-square">
                     <img src={src} alt="Outfit" className="w-full h-full object-cover rounded-2xl shadow-sm border border-white" />
                     <button
-                        onClick={() => removeImage(type === 'existing' ? images.findIndex(s => s === src) : newImageFiles.findIndex(f => f === src), type as 'existing' | 'new')}
+                        type="button"
+                        aria-label="Xóa ảnh này"
+                        onClick={() => removeImage(index, type)}
                         className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-lg"
                     >
                         &times;
                     </button>
                 </div>
             ))}
-             <div
+             <button
+                type="button"
+                aria-label="Thêm ảnh trang phục"
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full aspect-square bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-200 transition-colors"
             >
                 <Icon name="plus" className="w-6 h-6 text-slate-400" />
-            </div>
+            </button>
         </div>
 
-        <button
-          onClick={handleGenerateTags}
-          disabled={allImages.length === 0 || isGenerating}
-          className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white font-black py-4 px-5 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-50 mb-8"
-        >
-          {isGenerating ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-          ) : (
-            <><Icon name="sparkles" className="w-5 h-5" /><span>AI PHÂN TÍCH TAGS</span></>
-          )}
-        </button>
-        
         {error && <p className="bg-red-50 text-red-500 text-center p-3 rounded-xl mb-6 text-xs font-bold uppercase">{error}</p>}
-        
+
         <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
             <TagInputSection title="Áo" tags={tops} suggestions={suggestions.tops} onAddTag={(tag) => addTagCallback(setTops, tag)} onRemoveTag={(tag) => removeTagCallback(setTops, tag)} onSuggestionClick={(tag) => addTagCallback(setTops, tag)} />
             <TagInputSection title="Quần" tags={bottoms} suggestions={suggestions.bottoms} onAddTag={(tag) => addTagCallback(setBottoms, tag)} onRemoveTag={(tag) => removeTagCallback(setBottoms, tag)} onSuggestionClick={(tag) => addTagCallback(setBottoms, tag)} />
             <TagInputSection title="Tags chung" tags={tags} suggestions={suggestions.tags} onAddTag={(tag) => addTagCallback(setTags, tag)} onRemoveTag={(tag) => removeTagCallback(setTags, tag)} onSuggestionClick={(tag) => addTagCallback(setTags, tag)} />
+
+            <div>
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">Bộ sưu tập</h3>
+              {allCollections.length === 0 ? (
+                <p className="text-xs text-slate-400 font-medium">
+                  Chưa có bộ sưu tập nào. Tạo ở tab Bộ sưu tập rồi quay lại đây để gán.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {allCollections.map(collection => {
+                    const selected = collectionIds.includes(collection.id);
+                    return (
+                      <button
+                        key={collection.id}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => toggleCollection(collection.id)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                          selected
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                        }`}
+                      >
+                        {collection.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
         </div>
-        
+
         <div className="mt-8 flex items-center gap-4">
           <button onClick={handleSave} disabled={isSaving || isDeleting} className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 active:scale-95 transition-all">
             {isSaving ? 'ĐANG LƯU...' : 'LƯU TRANG PHỤC'}
           </button>
           {isEditMode && (
-            <button onClick={handleDeleteClick} disabled={isSaving || isDeleting} className="bg-slate-100 text-red-500 font-black py-4 px-6 rounded-2xl active:scale-95 transition-all">
+            <button type="button" aria-label="Xóa nhật ký này" onClick={handleDeleteClick} disabled={isSaving || isDeleting} className="bg-slate-100 text-red-500 font-black py-4 px-6 rounded-2xl active:scale-95 transition-all">
               <Icon name="trash" className="w-5 h-5" />
             </button>
           )}

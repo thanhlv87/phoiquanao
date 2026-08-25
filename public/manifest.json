@@ -1,8 +1,7 @@
-
 {
-  "name": "AI Fashion Mix",
-  "short_name": "FashionMix",
-  "description": "Smart AI Fashion Diary and Virtual Try-On",
+  "name": "Outfit Log",
+  "short_name": "Outfit Log",
+  "description": "Nhật ký thời trang tối giản: lưu trang phục hàng ngày, xem lại theo lịch.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f8fafc",

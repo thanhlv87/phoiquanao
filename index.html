@@ -1,79 +1,22 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Nhật ký thời trang tối giản: lưu trang phục hàng ngày, xem lại theo lịch và thời tiết." />
+    <meta name="theme-color" content="#4f46e5" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Outfit Logger">
-    <title>Outfit Logger</title>
+    <meta name="apple-mobile-web-app-title" content="Outfit Log">
+    <title>Outfit Log</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/thanhlv87/pic/refs/heads/main/fashion.png" />
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/thanhlv87/pic/refs/heads/main/fashion.png" />
     <link rel="manifest" href="/manifest.json">
-    
+
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
-            },
-          },
-        },
-      }
-    </script>
-    <style>
-      /* Ép tất cả các thẻ UI sử dụng font Inter */
-      html, body, input, button, textarea, select {
-        font-family: 'Inter', sans-serif !important;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-      }
-
-      body {
-        background-color: #f8fafc;
-      }
-      
-      .scrollbar-hide::-webkit-scrollbar {
-        display: none;
-      }
-      .scrollbar-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
-
-      @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-      @keyframes slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-      @keyframes scale-up { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-      .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
-      .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-      .animate-scale-up { animation: scale-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    </style>
-
-<script type="importmap">
-{
-  "imports": {
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "vite": "https://esm.sh/vite@^7.3.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
-    "@firebase/auth": "https://esm.sh/@firebase/auth@^1.12.0",
-    "@firebase/app": "https://esm.sh/@firebase/app@^0.14.6",
-    "@firebase/firestore": "https://esm.sh/@firebase/firestore@^4.9.3",
-    "@firebase/storage": "https://esm.sh/@firebase/storage@^0.14.0"
-  }
-}
-</script>
 </head>
 <body class="font-sans">
     <div id="root"></div>
@@ -81,10 +24,8 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then(registration => {
-            console.log('SW registered: ', registration);
-          }).catch(registrationError => {
-            console.log('SW registration failed: ', registrationError);
+          navigator.serviceWorker.register('/sw.js').catch(error => {
+            console.error('Đăng ký service worker thất bại:', error);
           });
         });
       }

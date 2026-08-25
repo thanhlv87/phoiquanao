@@ -2,7 +2,7 @@
 import React from 'react';
 
 interface IconProps extends React.SVGProps<SVGSVGElement> {
-  name: 'home' | 'calendar' | 'plus' | 'camera' | 'back' | 'chevron-left' | 'chevron-right' | 'search' | 'google' | 'logout' | 'sparkles' | 'mail' | 'lock' | 'collections' | 'mix' | 'trash' | 'chart-bar' | 'closet' | 'check';
+  name: 'home' | 'calendar' | 'plus' | 'back' | 'chevron-left' | 'chevron-right' | 'search' | 'logout' | 'sparkles' | 'mail' | 'lock' | 'collections' | 'trash' | 'chart-bar';
 }
 
 export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
@@ -26,16 +26,6 @@ export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
           <polyline points="9 22 9 12 15 12 15 22" />
         </svg>
       );
-    case 'closet':
-      return (
-        <svg {...defaultProps}>
-          <path d="M20 10V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3" />
-          <path d="M2 14h20" />
-          <path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2" />
-          <path d="M12 2v3" />
-          <path d="M12 10v4" />
-        </svg>
-      );
     case 'calendar':
       return (
         <svg {...defaultProps}>
@@ -50,13 +40,6 @@ export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
         <svg {...defaultProps}>
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-      );
-    case 'camera':
-      return (
-        <svg {...defaultProps}>
-          <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-          <circle cx="12" cy="13" r="3" />
         </svg>
       );
     case 'back':
@@ -83,14 +66,6 @@ export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
             <svg {...defaultProps}>
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-        );
-    case 'google':
-        return (
-            <svg width="24" height="24" viewBox="0 0 48 48" {...props}>
-                <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" />
-                <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" />
-                <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z" />
             </svg>
         );
     case 'logout':
@@ -129,14 +104,6 @@ export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
                 <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
             </svg>
         );
-    case 'mix':
-        return (
-             <svg {...defaultProps}>
-                <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
-                <path d="M12 2v4"/>
-                <path d="m9 5 3-3 3 3"/>
-             </svg>
-        );
     case 'trash':
         return (
             <svg {...defaultProps}>
@@ -150,12 +117,6 @@ export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
                 <line x1="12" y1="20" x2="12" y2="10" />
                 <line x1="18" y1="20" x2="18" y2="4" />
                 <line x1="6" y1="20" x2="6" y2="16" />
-            </svg>
-        );
-    case 'check':
-        return (
-            <svg {...defaultProps}>
-                <polyline points="20 6 9 17 4 12" />
             </svg>
         );
     default:

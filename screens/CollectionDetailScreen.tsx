@@ -46,7 +46,7 @@ export const CollectionDetailScreen: React.FC = () => {
     return (
         <div className="p-4 md:p-6 pb-20">
              <header className="flex items-center mb-6">
-                <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-gray-200 mr-2">
+                <button type="button" aria-label="Quay lại" onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-gray-200 mr-2">
                     <Icon name="back" className="w-6 h-6 text-gray-700" />
                 </button>
                 <div>
@@ -64,19 +64,20 @@ export const CollectionDetailScreen: React.FC = () => {
                 ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {outfitsInCollection.map(outfit => (
-                             <div 
-                                key={outfit.id} 
+                             <button
+                                type="button"
+                                key={outfit.id}
                                 onClick={() => navigate(`/outfit/${outfit.id}`)}
                                 className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer group"
                             >
                                 <div className="aspect-square w-full overflow-hidden">
                                     <img 
                                         src={outfit.imageUrls[0]} 
-                                        alt="Outfit" 
+                                        alt="" 
                                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                                     />
                                 </div>
-                            </div>
+                            </button>
                         ))}
                     </div>
                 )}

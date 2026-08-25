@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Outfit } from '../types';
-import { getOutfits, addOrUpdateOutfit as addOrUpdateOutfitService, deleteOutfit as deleteOutfitService } from '../services/firebaseService';
+import { getOutfits, addOrUpdateOutfit as addOrUpdateOutfitService, deleteOutfit as deleteOutfitService, OutfitInput } from '../services/firebaseService';
 import { useAuth } from './useAuth';
 
 interface OutfitState {
@@ -13,7 +13,7 @@ interface OutfitState {
 
 const OutfitContext = createContext<{
   state: OutfitState;
-  addOrUpdateOutfit: (outfitData: Omit<Outfit, 'imageUrls'> & { newImageFiles: string[], existingImageUrls: string[] }) => Promise<void>;
+  addOrUpdateOutfit: (outfitData: OutfitInput) => Promise<void>;
   deleteOutfit: (outfit: Outfit) => Promise<void>;
 } | undefined>(undefined);
 
@@ -66,7 +66,7 @@ export const OutfitProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     return () => { isMounted = false; };
   }, [user]);
 
-  const addOrUpdateOutfit = useCallback(async (outfitData: Omit<Outfit, 'imageUrls'> & { newImageFiles: string[], existingImageUrls: string[] }) => {
+  const addOrUpdateOutfit = useCallback(async (outfitData: OutfitInput) => {
     if (!user) throw new Error("Cannot add/update outfit: User not authenticated");
     try {
       const savedOutfit = await addOrUpdateOutfitService(user.uid, outfitData);
@@ -93,7 +93,7 @@ export const OutfitProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const deleteOutfit = useCallback(async (outfit: Outfit) => {
     if (!user) throw new Error("Cannot delete outfit: User not authenticated");
-    const { id, dateId } = outfit;
+    const { id, dateId, imageUrls } = outfit;
     const previousState = state;
     setState(prevState => {
         const newAllOutfits = { ...prevState.allOutfits };
@@ -106,7 +106,7 @@ export const OutfitProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         return { ...prevState, allOutfits: newAllOutfits, outfitsByDate: newOutfitsByDate, error: null };
     });
     try {
-      await deleteOutfitService(user.uid, id);
+      await deleteOutfitService(user.uid, id, imageUrls);
     } catch (error) {
       setState(previousState);
       throw error;

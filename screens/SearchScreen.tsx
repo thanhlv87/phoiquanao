@@ -58,19 +58,20 @@ export const SearchScreen: React.FC = () => {
         return (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {filteredOutfits.map(outfit => (
-                    <div 
-                        key={outfit.id} 
+                    <button
+                        type="button"
+                        key={outfit.id}
                         onClick={() => handleOutfitClick(outfit.id)}
                         className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer group"
                     >
                         <div className="aspect-square w-full overflow-hidden">
                             <img 
                                 src={outfit.imageUrls[0]} 
-                                alt="Outfit" 
+                                alt="" 
                                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                             />
                         </div>
-                    </div>
+                    </button>
                 ))}
             </div>
         );

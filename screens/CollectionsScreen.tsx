@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCollections } from '../hooks/useCollections';
 import { useOutfits } from '../hooks/useOutfits';
 import { Icon } from '../components/Icon';
-import { Outfit } from '../types';
+import { Collection, Outfit } from '../types';
 
 const AddCollectionModal: React.FC<{
     onClose: () => void;
@@ -64,12 +64,31 @@ const AddCollectionModal: React.FC<{
     );
 };
 
+const DeleteCollectionModal: React.FC<{
+    collection: Collection;
+    onClose: () => void;
+    onConfirm: () => void;
+}> = ({ collection, onClose, onConfirm }) => (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Xóa "{collection.name}"?</h3>
+            <p className="text-sm text-gray-500 mb-6">
+                Chỉ bộ sưu tập bị xóa, các trang phục bên trong vẫn được giữ nguyên.
+            </p>
+            <div className="flex justify-end gap-3">
+                <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300">Hủy</button>
+                <button type="button" onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700">Xóa</button>
+            </div>
+        </div>
+    </div>
+);
 
 export const CollectionsScreen: React.FC = () => {
     const navigate = useNavigate();
-    const { state: collectionState, addCollection } = useCollections();
+    const { state: collectionState, addCollection, deleteCollection } = useCollections();
     const { state: outfitState } = useOutfits();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [pendingDelete, setPendingDelete] = useState<Collection | null>(null);
 
     const collections = useMemo(() => Object.values(collectionState.collections), [collectionState.collections]);
     
@@ -99,6 +118,22 @@ export const CollectionsScreen: React.FC = () => {
     return (
         <div className="p-4 md:p-6 pb-20">
             {isModalOpen && <AddCollectionModal onClose={() => setIsModalOpen(false)} onAdd={addCollection} />}
+
+            {pendingDelete && (
+                <DeleteCollectionModal
+                    collection={pendingDelete}
+                    onClose={() => setPendingDelete(null)}
+                    onConfirm={async () => {
+                        try {
+                            await deleteCollection(pendingDelete.id);
+                        } catch (error) {
+                            console.error("Failed to delete collection", error);
+                        } finally {
+                            setPendingDelete(null);
+                        }
+                    }}
+                />
+            )}
 
             <header className="flex justify-between items-center mb-6">
                 <div>
@@ -130,25 +165,35 @@ export const CollectionsScreen: React.FC = () => {
                              const coverImage = firstOutfit ? firstOutfit.imageUrls[0] : "https://placehold.co/400x400/e2e8f0/a0aec0?text=...";
 
                             return (
-                                <div 
-                                    key={collection.id} 
-                                    onClick={() => handleCollectionClick(collection.id)}
-                                    className="bg-white rounded-xl shadow-md overflow-hidden cursor-pointer group"
-                                >
-                                    <div className="aspect-square w-full bg-gray-100 overflow-hidden relative">
-                                        <img 
-                                            src={coverImage}
-                                            alt={collection.name} 
-                                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                                        <div className="absolute bottom-2 left-3 text-white">
-                                            <h3 className="font-bold text-lg leading-tight drop-shadow-md">{collection.name}</h3>
+                                <div key={collection.id} className="relative bg-white rounded-xl shadow-md overflow-hidden group">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleCollectionClick(collection.id)}
+                                        className="block w-full text-left"
+                                    >
+                                        <div className="aspect-square w-full bg-gray-100 overflow-hidden relative">
+                                            <img 
+                                                src={coverImage}
+                                                alt=""
+                                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                                            <div className="absolute bottom-2 left-3 text-white">
+                                                <h3 className="font-bold text-lg leading-tight drop-shadow-md">{collection.name}</h3>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="p-3 bg-white">
-                                         <p className="text-sm text-gray-600">{outfitCount} trang phục</p>
-                                    </div>
+                                        <div className="p-3 bg-white">
+                                             <p className="text-sm text-gray-600">{outfitCount} trang phục</p>
+                                        </div>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        aria-label={`Xóa bộ sưu tập ${collection.name}`}
+                                        onClick={() => setPendingDelete(collection)}
+                                        className="absolute top-2 right-2 p-2 bg-white/90 text-red-500 rounded-xl shadow-lg opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                                    >
+                                        <Icon name="trash" className="w-4 h-4" />
+                                    </button>
                                 </div>
                             )
                         })}

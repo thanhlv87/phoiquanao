@@ -19,7 +19,8 @@ export const AuthScreen: React.FC = () => {
     useEffect(() => {
         if (user) {
             const origin = (location.state as any)?.from?.pathname || '/';
-            navigate(origin);
+            // replace: nếu không, bấm Back sau khi đăng nhập sẽ quay lại /auth.
+            navigate(origin, { replace: true });
         }
     }, [user, navigate, location]);
 
@@ -62,8 +63,8 @@ export const AuthScreen: React.FC = () => {
                             className="w-full h-full object-contain drop-shadow-lg"
                         />
                     </div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-2">Fashion Mix</h1>
-                    <p className="text-slate-400 font-bold text-[9px] uppercase tracking-[0.2em]">Nhật ký phong cách AI</p>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-2">Outfit Log</h1>
+                    <p className="text-slate-400 font-bold text-[9px] uppercase tracking-[0.2em]">Nhật ký phong cách của bạn</p>
                 </div>
 
                 <div className="bg-slate-100 p-1 rounded-2xl flex mb-8">

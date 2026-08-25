@@ -1,9 +1,6 @@
 {
   "name": "Outfit Log",
-  "description": "Ứng dụng nhật ký thời trang tối giản. Lưu trữ trang phục hàng ngày, xem lịch sử phối đồ theo thời tiết và quản lý phong cách cá nhân một cách nhanh chóng.",
-  "requestFramePermissions": [
-    "camera",
-    "geolocation"
-  ],
+  "description": "Ứng dụng nhật ký thời trang tối giản. Lưu trữ trang phục hàng ngày, xem lại lịch sử phối đồ và quản lý phong cách cá nhân một cách nhanh chóng.",
+  "requestFramePermissions": [],
   "majorCapabilities": []
 }

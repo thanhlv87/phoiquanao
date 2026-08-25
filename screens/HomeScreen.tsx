@@ -7,6 +7,9 @@ import { useToast } from '../hooks/useToast';
 import { getTodayDateString } from '../utils/dateUtils';
 import { Icon } from '../components/Icon';
 import { Outfit } from '../types';
+import { SearchSheet } from '../components/SearchSheet';
+import { StatsSheet } from '../components/StatsSheet';
+import { AccountSheet } from '../components/AccountSheet';
 
 const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => void }> = ({ outfits, onNavigate }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -103,9 +106,11 @@ const FlashbackSection: React.FC<{
 export const HomeScreen: React.FC = () => {
   const navigate = useNavigate();
   const { state } = useOutfits();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const [sheet, setSheet] = useState<'search' | 'stats' | 'account' | null>(null);
   const { showError } = useToast();
-  const { outfitsByDate, loading: outfitsLoading, error } = state;
+  const { outfitsByDate, allOutfits, loading: outfitsLoading, error } = state;
+  const outfitList = useMemo(() => Object.values(allOutfits), [allOutfits]);
 
   useEffect(() => {
     if (error) showError('Không tải được nhật ký. Kiểm tra kết nối mạng.');
@@ -150,27 +155,31 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <div className="p-4 md:p-6 pb-24 min-h-screen bg-slate-50 pt-12">
-      <header className="flex justify-between items-start mb-8">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 flex-shrink-0 animate-scale-up">
-            <img 
-              src="https://raw.githubusercontent.com/thanhlv87/pic/refs/heads/main/fashion.png" 
-              alt="Logo" 
+      {/* Hai hàng: logo + nút ở trên, lời chào ở dưới. Xếp cùng một hàng thì trên
+          máy 375px lời chào chỉ còn ~139px và bị cắt bằng dấu ba chấm. */}
+      <header className="mb-8">
+        <div className="flex justify-between items-center mb-5">
+          <div className="w-11 h-11 flex-shrink-0 animate-scale-up">
+            <img
+              src="https://raw.githubusercontent.com/thanhlv87/pic/refs/heads/main/fashion.png"
+              alt="Logo"
               className="w-full h-full object-contain drop-shadow-md"
             />
           </div>
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-0.5">{timeGreeting},</h1>
-            <p className="text-slate-500 font-bold text-base">{greetingName} ✨</p>
+          <div className="flex gap-2 flex-shrink-0">
+          <button type="button" aria-label="Tìm kiếm" onClick={() => setSheet('search')} className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm text-slate-500 active:scale-90 transition-all border border-slate-100">
+            <Icon name="search" className="w-4 h-4" />
+          </button>
+          <button type="button" aria-label="Thống kê" onClick={() => setSheet('stats')} className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm text-slate-500 active:scale-90 transition-all border border-slate-100">
+            <Icon name="chart-bar" className="w-4 h-4" />
+          </button>
+          <button type="button" aria-label="Tài khoản" onClick={() => setSheet('account')} className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm text-slate-500 active:scale-90 transition-all border border-slate-100">
+            <Icon name="logout" className="w-4 h-4" />
+          </button>
           </div>
         </div>
-        <div className="flex gap-2">
-          {user && !user.isAnonymous && (
-            <button type="button" aria-label="Đăng xuất" onClick={logout} className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm text-red-500 active:scale-90 transition-all border border-slate-100">
-              <Icon name="logout" className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+        <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-1">{timeGreeting},</h1>
+        <p className="text-slate-500 font-bold text-base truncate">{greetingName} ✨</p>
       </header>
 
       <main className="animate-fade-in">
@@ -198,6 +207,15 @@ export const HomeScreen: React.FC = () => {
           onNavigate={(id) => navigate(`/outfit/${id}`)}
         />
       </main>
+
+      <SearchSheet
+        open={sheet === 'search'}
+        outfits={outfitList}
+        onClose={() => setSheet(null)}
+        onSelect={(id) => { setSheet(null); navigate(`/outfit/${id}`); }}
+      />
+      <StatsSheet open={sheet === 'stats'} outfits={outfitList} onClose={() => setSheet(null)} />
+      <AccountSheet open={sheet === 'account'} outfits={outfitList} onClose={() => setSheet(null)} />
     </div>
   );
 };

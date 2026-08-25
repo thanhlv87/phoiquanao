@@ -2,7 +2,7 @@
 import React from 'react';
 
 interface IconProps extends React.SVGProps<SVGSVGElement> {
-  name: 'home' | 'calendar' | 'plus' | 'back' | 'chevron-left' | 'chevron-right' | 'logout' | 'mail' | 'lock' | 'trash';
+  name: 'home' | 'calendar' | 'plus' | 'back' | 'chevron-left' | 'chevron-right' | 'logout' | 'search' | 'chart-bar' | 'mail' | 'lock' | 'trash';
 }
 
 export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
@@ -88,6 +88,21 @@ export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
             <svg {...defaultProps}>
                 <polyline points="3 6 5 6 21 6" />
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+        );
+    case 'search':
+        return (
+            <svg {...defaultProps}>
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+        );
+    case 'chart-bar':
+        return (
+            <svg {...defaultProps}>
+                <line x1="12" y1="20" x2="12" y2="10" />
+                <line x1="18" y1="20" x2="18" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="16" />
             </svg>
         );
     default:

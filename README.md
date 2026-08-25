@@ -9,11 +9,17 @@ Nhật ký thời trang tối giản dạng PWA: chụp lại trang phục mỗi
 
 Điều hướng gọn trong hai tab: Home và Lịch.
 - **Thẻ gợi ý** — gợi ý thẻ dựng sẵn, tự học thêm thẻ bạn hay dùng (lưu ở localStorage).
+- **Tìm kiếm & thống kê** — mở dạng tấm trượt từ Home, không chiếm thêm tab.
+- **Dữ liệu của bạn** — tải toàn bộ nhật ký về máy dạng JSON, hoặc xoá sạch tài khoản.
+- **Đồng bộ realtime** — sửa trên máy này, máy kia thấy ngay.
 - **Offline** — Firestore bật persistent cache, service worker cache vỏ ứng dụng.
 
 ## Công nghệ
 
-React 18 · TypeScript · Vite 5 · Tailwind CSS 3 · React Router 6 · Firebase (Auth, Firestore, Storage)
+React 18 · TypeScript · Vite 5 · Tailwind CSS 3 · React Router 6 · Firebase (Auth, Firestore, Storage) · Vitest
+
+Ứng dụng thiết kế cho điện thoại. Firestore và Storage được nạp lười sau khi đăng
+nhập, nên lần tải đầu chỉ khoảng 104 KB gzip.
 
 ## Chạy tại máy
 
@@ -28,6 +34,15 @@ Build production và xem thử:
 npm run build
 npm run preview
 ```
+
+Kiểm tra:
+
+```bash
+npm test          # Vitest
+npx tsc --noEmit  # kiểm tra kiểu
+```
+
+CI trên GitHub Actions chạy đúng ba bước này cộng với build.
 
 Ứng dụng không cần biến môi trường nào. Cấu hình Firebase nằm trực tiếp trong
 [`services/firebaseConfig.ts`](services/firebaseConfig.ts) — đây là cấu hình client
@@ -76,10 +91,18 @@ chụp dọc không bị xoay ngang.
 ## Bố cục mã nguồn
 
 ```
-screens/     màn hình theo route
-components/  thành phần dùng chung (Icon, BottomNav)
-hooks/       context provider: auth, outfits, gợi ý thẻ
-services/    Firebase
-utils/       xử lý ngày tháng, nén ảnh
+screens/     màn hình theo route (Home, Lịch, Thêm/Sửa, Đăng nhập)
+components/  Icon, BottomNav, BottomSheet và ba tấm trượt (Tìm, Thống kê, Tài khoản)
+hooks/       context provider: auth, outfits, gợi ý thẻ, toast
+services/    firebaseApp (App + Auth), dataLayer (Firestore + Storage), firebaseService (mặt tiền lười)
+utils/       xử lý ngày tháng, nén ảnh, chọn thumbnail
+scripts/     script bảo trì dữ liệu -- xem scripts/README.md
+tests/       Vitest
 public/      service worker và web app manifest
 ```
+
+## Bảo trì dữ liệu
+
+`scripts/` có hai công cụ cho dữ liệu tồn từ các phiên bản trước: chuyển ảnh
+base64 lên Storage, và tìm file mồ côi trong bucket. Cả hai mặc định chỉ liệt kê.
+Chi tiết ở [scripts/README.md](scripts/README.md).

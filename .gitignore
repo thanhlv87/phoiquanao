@@ -113,3 +113,6 @@ dist
 
 # Vite
 dist
+
+# Firebase service account key
+serviceAccount*.json

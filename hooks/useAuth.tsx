@@ -9,7 +9,8 @@ import {
   createUserWithEmailAndPassword,
   EmailAuthProvider,
   linkWithCredential,
-  signInAnonymously
+  signInAnonymously,
+  deleteUser
 } from '@firebase/auth';
 // Fix: Import FirebaseError from 'firebase/app' instead of 'firebase/auth' as it is not exported from the latter in Firebase v9.
 // Fix: Updated Firebase import to use scoped package to resolve module export error.
@@ -24,6 +25,7 @@ interface AuthContextType {
   signInWithEmail: (email: string, password: string) => Promise<void>;
   loginAnonymously: () => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   clearError: () => void;
 }
 
@@ -122,9 +124,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Firebase từ chối xóa tài khoản nếu phiên đăng nhập đã cũ; lỗi
+  // auth/requires-recent-login được phía gọi xử lý.
+  const deleteAccount = async () => {
+    if (!auth.currentUser) return;
+    await deleteUser(auth.currentUser);
+  };
+
   const clearError = () => setError(null);
 
-  const value = { user, loading, signUpWithEmail, signInWithEmail, loginAnonymously, logout, error, clearError };
+  const value = { user, loading, deleteAccount, signUpWithEmail, signInWithEmail, loginAnonymously, logout, error, clearError };
 
   // Vẫn render children khi đang loading để phía dưới tự quyết định hiển thị gì
   // (AppContent dựng skeleton); chặn ở đây thì màn hình chỉ trắng trơn.

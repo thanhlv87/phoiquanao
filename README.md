@@ -103,6 +103,10 @@ public/      service worker và web app manifest
 
 ## Bảo trì dữ liệu
 
-`scripts/` có hai công cụ cho dữ liệu tồn từ các phiên bản trước: chuyển ảnh
-base64 lên Storage, và tìm file mồ côi trong bucket. Cả hai mặc định chỉ liệt kê.
-Chi tiết ở [scripts/README.md](scripts/README.md).
+`scripts/` có hai công cụ cho dữ liệu tồn từ các phiên bản trước:
+
+- `optimize-images.mjs` — đưa ảnh base64 lên Storage và dựng thumbnail cho ảnh cũ.
+  **Nên chạy một lần**, nếu không thư viện ảnh cũ sẽ không được hưởng thumbnail.
+- `find-orphan-files.mjs` — tìm file trong bucket không document nào tham chiếu.
+
+Cả hai mặc định chỉ liệt kê. Chi tiết ở [scripts/README.md](scripts/README.md).

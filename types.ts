@@ -7,11 +7,4 @@ export interface Outfit {
   tops: string[];
   bottoms: string[];
   tags: string[];
-  collectionIds?: string[];
-}
-
-export interface Collection {
-  id: string;
-  name: string;
-  description: string;
 }

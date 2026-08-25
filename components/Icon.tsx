@@ -2,7 +2,7 @@
 import React from 'react';
 
 interface IconProps extends React.SVGProps<SVGSVGElement> {
-  name: 'home' | 'calendar' | 'plus' | 'back' | 'chevron-left' | 'chevron-right' | 'search' | 'logout' | 'sparkles' | 'mail' | 'lock' | 'collections' | 'trash' | 'chart-bar';
+  name: 'home' | 'calendar' | 'plus' | 'back' | 'chevron-left' | 'chevron-right' | 'logout' | 'mail' | 'lock' | 'trash';
 }
 
 export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
@@ -61,13 +61,6 @@ export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
                 <polyline points="9 18 15 12 9 6" />
             </svg>
         );
-    case 'search':
-        return (
-            <svg {...defaultProps}>
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-        );
     case 'logout':
         return (
             <svg {...defaultProps}>
@@ -76,14 +69,6 @@ export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
                 <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
         );
-    case 'sparkles':
-        return (
-            <svg {...defaultProps}>
-                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-                <path d="M5 3L4 5L2 6L4 7L5 9L6 7L8 6L6 5L5 3Z" />
-                <path d="M20 16l-1 2-2 1 2 1 1 2 1-2 2-1-2-1-1-2Z" />
-            </svg>
-        )
     case 'mail':
         return (
             <svg {...defaultProps}>
@@ -98,25 +83,11 @@ export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
         );
-     case 'collections':
-        return (
-            <svg {...defaultProps}>
-                <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
-            </svg>
-        );
     case 'trash':
         return (
             <svg {...defaultProps}>
                 <polyline points="3 6 5 6 21 6" />
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            </svg>
-        );
-    case 'chart-bar':
-        return (
-            <svg {...defaultProps}>
-                <line x1="12" y1="20" x2="12" y2="10" />
-                <line x1="18" y1="20" x2="18" y2="4" />
-                <line x1="6" y1="20" x2="6" y2="16" />
             </svg>
         );
     default:

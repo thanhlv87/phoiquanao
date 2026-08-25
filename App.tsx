@@ -6,15 +6,10 @@ import { AuthScreen } from './screens/AuthScreen';
 import { BottomNav } from './components/BottomNav';
 import { OutfitProvider } from './hooks/useOutfits';
 import { AuthProvider, useAuth } from './hooks/useAuth';
-import { CollectionProvider } from './hooks/useCollections';
 
 // Chỉ Home + Auth nằm trong bundle khởi động; các màn còn lại tải theo nhu cầu.
 const CalendarScreen = lazy(() => import('./screens/CalendarScreen').then(m => ({ default: m.CalendarScreen })));
 const AddOutfitScreen = lazy(() => import('./screens/AddOutfitScreen').then(m => ({ default: m.AddOutfitScreen })));
-const CollectionsScreen = lazy(() => import('./screens/CollectionsScreen').then(m => ({ default: m.CollectionsScreen })));
-const CollectionDetailScreen = lazy(() => import('./screens/CollectionDetailScreen').then(m => ({ default: m.CollectionDetailScreen })));
-const SearchScreen = lazy(() => import('./screens/SearchScreen').then(m => ({ default: m.SearchScreen })));
-const StatisticsScreen = lazy(() => import('./screens/StatisticsScreen').then(m => ({ default: m.StatisticsScreen })));
 
 const HomeSkeleton: React.FC = () => (
   <div className="p-4 md:p-6 min-h-screen bg-slate-50 animate-pulse">
@@ -101,10 +96,6 @@ function AppContent() {
                   <Routes>
                     <Route path="/" element={<HomeScreen />} />
                     <Route path="/calendar" element={<CalendarScreen />} />
-                    <Route path="/search" element={<SearchScreen />} />
-                    <Route path="/statistics" element={<StatisticsScreen />} />
-                    <Route path="/collections" element={<CollectionsScreen />} />
-                    <Route path="/collection/:collectionId" element={<CollectionDetailScreen />} />
                     <Route path="/add-outfit/:date" element={<AddOutfitScreen />} />
                     <Route path="/outfit/:outfitId" element={<AddOutfitScreen />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
@@ -123,11 +114,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <CollectionProvider>
-        <OutfitProvider>
-          <AppContent />
-        </OutfitProvider>
-      </CollectionProvider>
+      <OutfitProvider>
+        <AppContent />
+      </OutfitProvider>
     </AuthProvider>
   );
 }

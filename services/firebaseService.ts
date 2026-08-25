@@ -1,8 +1,8 @@
 
-import { collection, getDocs, setDoc, doc, deleteDoc, addDoc } from "@firebase/firestore";
+import { collection, getDocs, setDoc, doc, deleteDoc } from "@firebase/firestore";
 import { ref, uploadString, getDownloadURL, deleteObject } from "@firebase/storage";
 import { db, storage } from './firebaseConfig';
-import { Outfit, Collection } from '../types';
+import { Outfit } from '../types';
 
 // --- Ảnh ---
 // Ảnh đi lên Cloud Storage, Firestore chỉ giữ URL. Trước đây data URL base64 được
@@ -87,21 +87,4 @@ export const addOrUpdateOutfit = async (userId: string, outfitData: OutfitInput)
 export const deleteOutfit = async (userId: string, outfitId: string, imageUrls: string[] = []): Promise<void> => {
     await deleteDoc(doc(db, 'users', userId, 'outfits', outfitId));
     await deleteStoredImages(imageUrls);
-};
-
-// --- Collections ---
-export const getCollections = async (userId: string): Promise<Collection[]> => {
-    const ref = collection(db, 'users', userId, 'collections');
-    const snap = await getDocs(ref);
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Collection));
-};
-
-export const addCollection = async (userId: string, collectionData: Omit<Collection, 'id'>): Promise<Collection> => {
-    const ref = collection(db, 'users', userId, 'collections');
-    const docRef = await addDoc(ref, collectionData);
-    return { id: docRef.id, ...collectionData };
-};
-
-export const deleteCollection = async (userId: string, collectionId: string): Promise<void> => {
-    await deleteDoc(doc(db, 'users', userId, 'collections', collectionId));
 };

@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOutfits } from '../hooks/useOutfits';
 import { useTagSuggestions } from '../hooks/useTagSuggestions';
-import { useCollections } from '../hooks/useCollections';
 import { parseDateString, formatDate } from '../utils/dateUtils';
 import { Icon } from '../components/Icon';
 import { compressImage } from '../utils/imageCompression';
@@ -110,7 +109,6 @@ export const AddOutfitScreen: React.FC = () => {
   const { date: dateParam, outfitId } = useParams<{ date?: string; outfitId?: string }>();
   const { state, addOrUpdateOutfit, deleteOutfit } = useOutfits();
   const { suggestions, addSuggestion } = useTagSuggestions();
-  const { state: collectionState } = useCollections();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [id, setId] = useState<string>('');
@@ -119,7 +117,6 @@ export const AddOutfitScreen: React.FC = () => {
   const [tops, setTops] = useState<string[]>([]);
   const [bottoms, setBottoms] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
-  const [collectionIds, setCollectionIds] = useState<string[]>([]);
 
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -146,7 +143,6 @@ export const AddOutfitScreen: React.FC = () => {
     setTops(existingOutfit.tops);
     setBottoms(existingOutfit.bottoms);
     setTags(existingOutfit.tags);
-    setCollectionIds(existingOutfit.collectionIds || []);
   }, [existingOutfit, isEditMode]);
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,14 +169,6 @@ export const AddOutfitScreen: React.FC = () => {
     }
   };
 
-  const toggleCollection = (collectionId: string) => {
-    setCollectionIds(prev =>
-      prev.includes(collectionId)
-        ? prev.filter(cid => cid !== collectionId)
-        : [...prev, collectionId]
-    );
-  };
-
   const handleSave = async () => {
     const dateId = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     
@@ -205,7 +193,6 @@ export const AddOutfitScreen: React.FC = () => {
       tops,
       bottoms,
       tags,
-      collectionIds,
     };
 
     try {
@@ -253,11 +240,6 @@ export const AddOutfitScreen: React.FC = () => {
     ...images.map((url, index) => ({ type: 'existing' as const, src: url, index })),
     ...newImageFiles.map((fileStr, index) => ({ type: 'new' as const, src: fileStr, index }))
   ], [images, newImageFiles]);
-
-  const allCollections = useMemo(
-    () => Object.values(collectionState.collections),
-    [collectionState.collections]
-  );
 
   // Mở thẳng /outfit/:id (F5 hoặc deep link) khi danh sách outfit chưa tải xong
   // thì form rỗng và `id` vẫn là chuỗi rỗng -> bấm Lưu sẽ tạo bản ghi MỚI thay vì
@@ -335,36 +317,6 @@ export const AddOutfitScreen: React.FC = () => {
             <TagInputSection title="Áo" tags={tops} suggestions={suggestions.tops} onAddTag={(tag) => addTagCallback(setTops, tag)} onRemoveTag={(tag) => removeTagCallback(setTops, tag)} onSuggestionClick={(tag) => addTagCallback(setTops, tag)} />
             <TagInputSection title="Quần" tags={bottoms} suggestions={suggestions.bottoms} onAddTag={(tag) => addTagCallback(setBottoms, tag)} onRemoveTag={(tag) => removeTagCallback(setBottoms, tag)} onSuggestionClick={(tag) => addTagCallback(setBottoms, tag)} />
             <TagInputSection title="Tags chung" tags={tags} suggestions={suggestions.tags} onAddTag={(tag) => addTagCallback(setTags, tag)} onRemoveTag={(tag) => removeTagCallback(setTags, tag)} onSuggestionClick={(tag) => addTagCallback(setTags, tag)} />
-
-            <div>
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">Bộ sưu tập</h3>
-              {allCollections.length === 0 ? (
-                <p className="text-xs text-slate-400 font-medium">
-                  Chưa có bộ sưu tập nào. Tạo ở tab Bộ sưu tập rồi quay lại đây để gán.
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {allCollections.map(collection => {
-                    const selected = collectionIds.includes(collection.id);
-                    return (
-                      <button
-                        key={collection.id}
-                        type="button"
-                        aria-pressed={selected}
-                        onClick={() => toggleCollection(collection.id)}
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
-                          selected
-                            ? 'bg-indigo-600 text-white shadow-md'
-                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                        }`}
-                      >
-                        {collection.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
         </div>
 
         <div className="mt-8 flex items-center gap-4">

@@ -6,9 +6,9 @@ Nhật ký thời trang tối giản dạng PWA: chụp lại trang phục mỗi
 
 - **Nhật ký theo ngày** — nhiều bộ trang phục cho mỗi ngày, kèm nhiều ảnh (tự nén trước khi tải lên).
 - **Lịch** — xem cả tháng dưới dạng ảnh thu nhỏ, bấm vào ngày để xem chi tiết.
+
+Điều hướng gọn trong hai tab: Home và Lịch.
 - **Thẻ gợi ý** — gợi ý thẻ dựng sẵn, tự học thêm thẻ bạn hay dùng (lưu ở localStorage).
-- **Bộ sưu tập** — nhóm trang phục theo dịp hoặc phong cách.
-- **Tìm kiếm & thống kê** — tìm theo thẻ, xem tần suất theo thứ trong tuần và tổng kết năm.
 - **Offline** — Firestore bật persistent cache, service worker cache vỏ ứng dụng.
 
 ## Công nghệ
@@ -54,7 +54,6 @@ mọi dữ liệu nằm dưới `users/{uid}` và chỉ chính chủ mới đọ
 
 ```
 users/{uid}/outfits/{outfitId}      # bản ghi trang phục, imageUrls trỏ tới Storage
-users/{uid}/collections/{id}        # bộ sưu tập
 ```
 
 Ảnh được nén ở client rồi tải lên `users/{uid}/images/{outfitId}/` trên Cloud
@@ -79,8 +78,8 @@ chụp dọc không bị xoay ngang.
 ```
 screens/     màn hình theo route
 components/  thành phần dùng chung (Icon, BottomNav)
-hooks/       context provider: auth, outfits, collections, gợi ý thẻ
+hooks/       context provider: auth, outfits, gợi ý thẻ
 services/    Firebase
-utils/       xử lý ngày tháng, nén ảnh, tổng hợp thẻ
+utils/       xử lý ngày tháng, nén ảnh
 public/      service worker và web app manifest
 ```

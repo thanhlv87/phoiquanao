@@ -5,6 +5,7 @@ import { useOutfits } from '../hooks/useOutfits';
 import { Icon } from '../components/Icon';
 import { Outfit } from '../types';
 import { formatDate, parseDateString } from '../utils/dateUtils';
+import { thumbAt } from '../utils/imageUrls';
 
 const monthNames = [
   "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
@@ -26,11 +27,11 @@ const OutfitDetailModal: React.FC<{ outfit: Outfit; onClose: () => void; onUpdat
                      {outfit.imageUrls.length > 1 ? (
                         <div className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide">
                             {outfit.imageUrls.map((url, index) => (
-                                <img key={index} src={url} alt={`Outfit ${index + 1}`} className="w-full aspect-square object-cover flex-shrink-0 snap-center" />
+                                <img key={index} src={url} alt={`Ảnh trang phục ${index + 1}`} decoding="async" className="w-full aspect-square object-cover flex-shrink-0 snap-center" />
                             ))}
                         </div>
                     ) : (
-                        <img src={outfit.imageUrls[0]} alt="Outfit" className="w-full aspect-square object-cover" />
+                        <img src={outfit.imageUrls[0]} alt="Ảnh trang phục" decoding="async" className="w-full aspect-square object-cover" />
                     )}
                     <button type="button" aria-label="Đóng" onClick={onClose} className="absolute top-4 right-4 bg-white/90 text-slate-900 rounded-full w-10 h-10 flex items-center justify-center text-xl shadow-lg">&times;</button>
                 </div>
@@ -101,7 +102,7 @@ const OutfitPreview: React.FC<{
                     {outfits.map(outfit => (
                         <button type="button" key={outfit.id} onClick={() => onSelectOutfit(outfit)} className="text-left bg-white p-2 rounded-[2rem] shadow-sm border border-slate-50 cursor-pointer hover:shadow-xl transition-all active:scale-95">
                             <div className="aspect-square bg-slate-100 rounded-[1.5rem] overflow-hidden mb-2 relative">
-                                <img src={outfit.imageUrls[0]} alt="" className="w-full h-full object-cover" />
+                                <img src={thumbAt(outfit)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                             </div>
                             <div className="px-2 pb-1">
                                 <p className="text-[10px] font-black uppercase text-indigo-600 truncate">{outfit.tops[0] || 'Phối đồ'}</p>
@@ -154,7 +155,7 @@ export const CalendarScreen: React.FC = () => {
           <div className={`w-full h-full rounded-2xl flex items-center justify-center transition-all duration-300 ${isSelected ? 'ring-2 ring-indigo-500 bg-indigo-50 shadow-md scale-105 z-10' : ''}`}>
             {hasOutfit ? (
               <div className="w-full h-full rounded-2xl overflow-hidden relative">
-                <img src={outfitsForDay[0].imageUrls[0]} alt="" className="w-full h-full object-cover opacity-80" />
+                <img src={thumbAt(outfitsForDay[0])} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover opacity-80" />
                 <div className="absolute inset-0 bg-black/10"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
                     <span className="text-white font-black text-sm drop-shadow-md">{day}</span>

@@ -3,9 +3,11 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOutfits } from '../hooks/useOutfits';
 import { useTagSuggestions } from '../hooks/useTagSuggestions';
+import { useToast } from '../hooks/useToast';
 import { parseDateString, formatDate } from '../utils/dateUtils';
 import { Icon } from '../components/Icon';
-import { compressImage } from '../utils/imageCompression';
+import { createImageVariants } from '../utils/imageCompression';
+import type { StoredImage } from '../services/firebaseService';
 
 // --- Modal Component ---
 const DeleteConfirmModal: React.FC<{ 
@@ -109,11 +111,13 @@ export const AddOutfitScreen: React.FC = () => {
   const { date: dateParam, outfitId } = useParams<{ date?: string; outfitId?: string }>();
   const { state, addOrUpdateOutfit, deleteOutfit } = useOutfits();
   const { suggestions, addSuggestion } = useTagSuggestions();
+  const { showError, showSuccess } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [id, setId] = useState<string>('');
-  const [images, setImages] = useState<string[]>([]);
-  const [newImageFiles, setNewImageFiles] = useState<string[]>([]);
+  // Ảnh cũ giữ lại và ảnh mới đều mang cả hai biến thể (đầy đủ + thumb).
+  const [images, setImages] = useState<StoredImage[]>([]);
+  const [newImages, setNewImages] = useState<StoredImage[]>([]);
   const [tops, setTops] = useState<string[]>([]);
   const [bottoms, setBottoms] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
@@ -139,7 +143,11 @@ export const AddOutfitScreen: React.FC = () => {
     // Chưa tải xong danh sách outfit thì chưa có gì để đổ vào form.
     if (!isEditMode || !existingOutfit) return;
     setId(existingOutfit.id);
-    setImages(existingOutfit.imageUrls);
+    // Outfit đời trước không có thumbUrls -> dùng tạm ảnh đầy đủ.
+    setImages(existingOutfit.imageUrls.map((full, i) => ({
+      full,
+      thumb: existingOutfit.thumbUrls?.[i] || full,
+    })));
     setTops(existingOutfit.tops);
     setBottoms(existingOutfit.bottoms);
     setTags(existingOutfit.tags);
@@ -150,10 +158,8 @@ export const AddOutfitScreen: React.FC = () => {
       const files = Array.from(e.target.files);
       setError(null);
       try {
-        const compressedFiles = await Promise.all(
-          files.map((file: File) => compressImage(file, { maxWidth: 1080, quality: 0.7, maxBytes: 250 * 1024 }))
-        );
-        setNewImageFiles(prev => [...prev, ...compressedFiles]);
+        const variants = await Promise.all(files.map((file: File) => createImageVariants(file)));
+        setNewImages(prev => [...prev, ...variants]);
       } catch (err) {
         console.error("Failed to compress images:", err);
         setError("Không thể xử lý hình ảnh.");
@@ -165,14 +171,14 @@ export const AddOutfitScreen: React.FC = () => {
     if (type === 'existing') {
         setImages(prev => prev.filter((_, i) => i !== index));
     } else {
-        setNewImageFiles(prev => prev.filter((_, i) => i !== index));
+        setNewImages(prev => prev.filter((_, i) => i !== index));
     }
   };
 
   const handleSave = async () => {
     const dateId = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     
-    if (images.length === 0 && newImageFiles.length === 0) {
+    if (images.length === 0 && newImages.length === 0) {
       setError("Vui lòng thêm hình ảnh.");
       return;
     }
@@ -186,10 +192,12 @@ export const AddOutfitScreen: React.FC = () => {
       // đồ cũ sẽ đẩy nó lên hiện tại và làm sai thứ tự lẫn thống kê.
       date: existingOutfit?.date || new Date().toISOString(),
       dateId,
-      newImageFiles,
-      existingImageUrls: images,
-      // Ảnh người dùng đã gỡ khỏi form: xóa khỏi Storage sau khi lưu xong.
-      removedImageUrls: (existingOutfit?.imageUrls || []).filter(url => !images.includes(url)),
+      keptImages: images,
+      newImages,
+      // Ảnh người dùng đã gỡ khỏi form: dọn khỏi Storage sau khi lưu xong.
+      removedImages: (existingOutfit?.imageUrls || [])
+        .map((full, i) => ({ full, thumb: existingOutfit?.thumbUrls?.[i] || full }))
+        .filter(old => !images.some(kept => kept.full === old.full)),
       tops,
       bottoms,
       tags,
@@ -200,9 +208,11 @@ export const AddOutfitScreen: React.FC = () => {
       [...tops].forEach(t => addSuggestion('tops', t));
       [...bottoms].forEach(t => addSuggestion('bottoms', t));
       [...tags].forEach(t => addSuggestion('tags', t));
+      showSuccess('Đã lưu trang phục.');
       navigate('/');
     } catch (error) {
       console.error("Error saving outfit:", error);
+      showError('Không lưu được. Kiểm tra kết nối rồi thử lại.');
       setError("Không thể lưu. Vui lòng thử lại.");
       setIsSaving(false);
     }
@@ -222,6 +232,7 @@ export const AddOutfitScreen: React.FC = () => {
         navigate('/');
     } catch (error) {
         console.error("Error deleting outfit:", error);
+        showError('Không xóa được. Vui lòng thử lại.');
         setError("Lỗi khi xóa.");
         setIsDeleting(false);
         setShowDeleteModal(false);
@@ -236,10 +247,11 @@ export const AddOutfitScreen: React.FC = () => {
     setter(prev => prev.filter(tag => tag !== tagToRemove));
   }, []);
 
+  // Lưới chọn ảnh chỉ rộng ~124px trên máy to nhất, nên hiển thị bằng thumb.
   const allImages = useMemo(() => [
-    ...images.map((url, index) => ({ type: 'existing' as const, src: url, index })),
-    ...newImageFiles.map((fileStr, index) => ({ type: 'new' as const, src: fileStr, index }))
-  ], [images, newImageFiles]);
+    ...images.map((image, index) => ({ type: 'existing' as const, src: image.thumb, index })),
+    ...newImages.map((image, index) => ({ type: 'new' as const, src: image.thumb, index }))
+  ], [images, newImages]);
 
   // Mở thẳng /outfit/:id (F5 hoặc deep link) khi danh sách outfit chưa tải xong
   // thì form rỗng và `id` vẫn là chuỗi rỗng -> bấm Lưu sẽ tạo bản ghi MỚI thay vì
@@ -290,7 +302,7 @@ export const AddOutfitScreen: React.FC = () => {
         <div className="grid grid-cols-3 gap-3 mb-6">
             {allImages.map(({ type, src, index }) => (
                 <div key={`${type}-${index}`} className="relative group aspect-square">
-                    <img src={src} alt="Outfit" className="w-full h-full object-cover rounded-2xl shadow-sm border border-white" />
+                    <img src={src} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover rounded-2xl shadow-sm border border-white" />
                     <button
                         type="button"
                         aria-label="Xóa ảnh này"

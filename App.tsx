@@ -6,6 +6,7 @@ import { AuthScreen } from './screens/AuthScreen';
 import { BottomNav } from './components/BottomNav';
 import { OutfitProvider } from './hooks/useOutfits';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { ToastProvider } from './hooks/useToast';
 
 // Chỉ Home + Auth nằm trong bundle khởi động; các màn còn lại tải theo nhu cầu.
 const CalendarScreen = lazy(() => import('./screens/CalendarScreen').then(m => ({ default: m.CalendarScreen })));
@@ -113,11 +114,13 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <OutfitProvider>
-        <AppContent />
-      </OutfitProvider>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <OutfitProvider>
+          <AppContent />
+        </OutfitProvider>
+      </AuthProvider>
+    </ToastProvider>
   );
 }
 

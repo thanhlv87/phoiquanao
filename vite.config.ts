@@ -10,7 +10,9 @@ export default defineConfig({
         // Tách vendor để firebase không phải tải lại mỗi lần code app đổi.
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
-          firebase: ['@firebase/app', '@firebase/auth', '@firebase/firestore', '@firebase/storage'],
+          // Tách riêng: core cần ngay lúc khởi động, data chỉ nạp sau khi đăng nhập.
+          'firebase-core': ['@firebase/app', '@firebase/auth'],
+          'firebase-data': ['@firebase/firestore', '@firebase/storage'],
         },
       },
     },

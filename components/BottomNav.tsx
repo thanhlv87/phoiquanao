@@ -24,7 +24,9 @@ const NavItem: React.FC<{ to: string; icon: 'home' | 'calendar'; label: string }
 export const BottomNav: React.FC = () => {
   return (
     <nav aria-label="Điều hướng chính" className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-lg border-t border-slate-100 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
-      <div className="flex justify-around max-w-lg mx-auto px-10">
+      {/* pb theo safe-area: chạy PWA standalone trên iPhone thì thanh home
+          indicator che mất nhãn nếu chỉ dùng padding cố định. */}
+      <div className="flex justify-around max-w-lg mx-auto px-10 pb-[env(safe-area-inset-bottom)]">
         <NavItem to="/" icon="home" label="Home" />
         <NavItem to="/calendar" icon="calendar" label="Lịch" />
       </div>

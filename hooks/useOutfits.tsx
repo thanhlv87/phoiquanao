@@ -1,7 +1,12 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Outfit } from '../types';
-import { getOutfits, addOrUpdateOutfit as addOrUpdateOutfitService, deleteOutfit as deleteOutfitService, OutfitInput } from '../services/firebaseService';
+import {
+  subscribeOutfits,
+  addOrUpdateOutfit as addOrUpdateOutfitService,
+  deleteOutfit as deleteOutfitService,
+  OutfitInput,
+} from '../services/firebaseService';
 import { useAuth } from './useAuth';
 
 interface OutfitState {
@@ -11,6 +16,24 @@ interface OutfitState {
   error: Error | null;
 }
 
+const emptyState: OutfitState = { outfitsByDate: {}, allOutfits: {}, loading: false, error: null };
+
+const index = (outfits: Outfit[]): Pick<OutfitState, 'outfitsByDate' | 'allOutfits'> => {
+  const outfitsByDate: Record<string, Outfit[]> = {};
+  const allOutfits: Record<string, Outfit> = {};
+
+  outfits.forEach(outfit => {
+    allOutfits[outfit.id] = outfit;
+    (outfitsByDate[outfit.dateId] ||= []).push(outfit);
+  });
+
+  for (const dateId in outfitsByDate) {
+    outfitsByDate[dateId].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
+
+  return { outfitsByDate, allOutfits };
+};
+
 const OutfitContext = createContext<{
   state: OutfitState;
   addOrUpdateOutfit: (outfitData: OutfitInput) => Promise<void>;
@@ -19,99 +42,54 @@ const OutfitContext = createContext<{
 
 export const OutfitProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const [state, setState] = useState<OutfitState>({
-    outfitsByDate: {},
-    allOutfits: {},
-    loading: true,
-    error: null,
-  });
+  const [state, setState] = useState<OutfitState>({ ...emptyState, loading: true });
 
   useEffect(() => {
-    let isMounted = true;
-    
-    const fetchOutfits = async () => {
-      if (!user) {
-        if (isMounted) setState({ outfitsByDate: {}, allOutfits: {}, loading: false, error: null });
-        return;
+    if (!user) {
+      setState(emptyState);
+      return;
+    }
+
+    setState(prev => ({ ...prev, loading: true }));
+
+    // subscribeOutfits phải await dynamic import, nên có thể trả về sau khi effect
+    // đã bị dọn (đổi tài khoản, unmount). Cờ này tránh rò subscription.
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
+
+    subscribeOutfits(
+      user.uid,
+      outfits => {
+        if (!cancelled) setState({ ...index(outfits), loading: false, error: null });
+      },
+      error => {
+        if (!cancelled) setState(prev => ({ ...prev, loading: false, error }));
       }
+    ).then(fn => {
+      if (cancelled) fn();
+      else unsubscribe = fn;
+    }).catch(error => {
+      if (!cancelled) setState(prev => ({ ...prev, loading: false, error: error as Error }));
+    });
 
-      // Giữ lại state cũ nếu có (để không hiện màn hình trống khi reload)
-      try {
-        const outfitsData = await getOutfits(user.uid);
-        if (!isMounted) return;
-
-        const outfitsByDate: Record<string, Outfit[]> = {};
-        const allOutfits: Record<string, Outfit> = {};
-
-        outfitsData.forEach(outfit => {
-            allOutfits[outfit.id] = outfit;
-            if (!outfitsByDate[outfit.dateId]) {
-                outfitsByDate[outfit.dateId] = [];
-            }
-            outfitsByDate[outfit.dateId].push(outfit);
-        });
-
-        for (const dateId in outfitsByDate) {
-            outfitsByDate[dateId].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        }
-
-        setState({ outfitsByDate, allOutfits, loading: false, error: null });
-      } catch (e) {
-        console.error("Failed to fetch outfits:", e);
-        if (isMounted) setState(prev => ({ ...prev, loading: false, error: e as Error }));
-      }
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
     };
-
-    fetchOutfits();
-    return () => { isMounted = false; };
   }, [user]);
 
+  // onSnapshot tự phát lại sau mỗi lần ghi, nên không cần cập nhật state thủ công.
+  // Firestore còn phát ngay từ cache trước khi server xác nhận, tức là đã có sẵn
+  // hiệu ứng optimistic mà không phải tự dựng.
   const addOrUpdateOutfit = useCallback(async (outfitData: OutfitInput) => {
     if (!user) throw new Error("Cannot add/update outfit: User not authenticated");
-    try {
-      const savedOutfit = await addOrUpdateOutfitService(user.uid, outfitData);
-      setState(prevState => {
-        const newAllOutfits = { ...prevState.allOutfits, [savedOutfit.id]: savedOutfit };
-        const newOutfitsByDate = { ...prevState.outfitsByDate };
-        const dateId = savedOutfit.dateId;
-        const outfitsForDay = newOutfitsByDate[dateId] ? [...newOutfitsByDate[dateId]] : [];
-        const existingIndex = outfitsForDay.findIndex(o => o.id === savedOutfit.id);
-        if (existingIndex > -1) {
-            outfitsForDay[existingIndex] = savedOutfit;
-        } else {
-            outfitsForDay.push(savedOutfit);
-        }
-        outfitsForDay.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        newOutfitsByDate[dateId] = outfitsForDay;
-        return { ...prevState, allOutfits: newAllOutfits, outfitsByDate: newOutfitsByDate, error: null };
-      });
-    } catch (error) {
-      console.error("Failed to save outfit in hook:", error);
-      throw error;
-    }
+    await addOrUpdateOutfitService(user.uid, outfitData);
   }, [user]);
 
   const deleteOutfit = useCallback(async (outfit: Outfit) => {
     if (!user) throw new Error("Cannot delete outfit: User not authenticated");
-    const { id, dateId, imageUrls } = outfit;
-    const previousState = state;
-    setState(prevState => {
-        const newAllOutfits = { ...prevState.allOutfits };
-        delete newAllOutfits[id];
-        const newOutfitsByDate = { ...prevState.outfitsByDate };
-        if (newOutfitsByDate[dateId]) {
-            newOutfitsByDate[dateId] = newOutfitsByDate[dateId].filter(o => o.id !== id);
-            if(newOutfitsByDate[dateId].length === 0) delete newOutfitsByDate[dateId];
-        }
-        return { ...prevState, allOutfits: newAllOutfits, outfitsByDate: newOutfitsByDate, error: null };
-    });
-    try {
-      await deleteOutfitService(user.uid, id, imageUrls);
-    } catch (error) {
-      setState(previousState);
-      throw error;
-    }
-  }, [user, state]);
+    await deleteOutfitService(user.uid, outfit);
+  }, [user]);
 
   return (
     <OutfitContext.Provider value={{ state, addOrUpdateOutfit, deleteOutfit }}>

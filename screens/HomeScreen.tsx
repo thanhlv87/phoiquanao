@@ -3,6 +3,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOutfits } from '../hooks/useOutfits';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
 import { getTodayDateString } from '../utils/dateUtils';
 import { Icon } from '../components/Icon';
 import { Outfit } from '../types';
@@ -35,7 +36,7 @@ const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => 
                 {outfits.map((outfit) => (
                     <button type="button" key={outfit.id} onClick={() => onNavigate(outfit.id)} className="snap-start flex-shrink-0 w-[85%] text-left bg-white rounded-[2.2rem] shadow-lg overflow-hidden transition-all hover:scale-[1.01] cursor-pointer p-2 border border-slate-100">
                         <div className="aspect-square rounded-[1.8rem] overflow-hidden relative">
-                          <img src={outfit.imageUrls[0]} alt="" className="w-full h-full object-cover" />
+                          <img src={outfit.imageUrls[0]} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                         </div>
                         <div className="p-4">
                             <div className="flex flex-wrap gap-1.5">
@@ -103,7 +104,12 @@ export const HomeScreen: React.FC = () => {
   const navigate = useNavigate();
   const { state } = useOutfits();
   const { user, logout } = useAuth();
-  const { outfitsByDate, loading: outfitsLoading } = state;
+  const { showError } = useToast();
+  const { outfitsByDate, loading: outfitsLoading, error } = state;
+
+  useEffect(() => {
+    if (error) showError('Không tải được nhật ký. Kiểm tra kết nối mạng.');
+  }, [error, showError]);
   const todayId = getTodayDateString();
   const todaysOutfits = outfitsByDate[todayId] || [];
 

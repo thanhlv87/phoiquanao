@@ -14,7 +14,7 @@ import {
 // Fix: Import FirebaseError from 'firebase/app' instead of 'firebase/auth' as it is not exported from the latter in Firebase v9.
 // Fix: Updated Firebase import to use scoped package to resolve module export error.
 import { FirebaseError } from '@firebase/app';
-import { auth } from '../services/firebaseConfig';
+import { auth } from '../services/firebaseApp';
 
 interface AuthContextType {
   user: User | null;

@@ -2,7 +2,7 @@
 import React from 'react';
 
 interface IconProps extends React.SVGProps<SVGSVGElement> {
-  name: 'home' | 'calendar' | 'plus' | 'back' | 'chevron-left' | 'chevron-right' | 'logout' | 'search' | 'chart-bar' | 'mail' | 'lock' | 'trash' | 'settings' | 'palette' | 'info';
+  name: 'home' | 'calendar' | 'plus' | 'back' | 'chevron-left' | 'chevron-right' | 'logout' | 'search' | 'chart-bar' | 'mail' | 'lock' | 'trash' | 'settings' | 'palette' | 'info' | 'share' | 'install';
 }
 
 export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
@@ -128,6 +128,22 @@ export const Icon: React.FC<IconProps> = ({ name, ...props }) => {
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="16" x2="12" y2="12" />
                 <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+        );
+    case 'share':
+        return (
+            <svg {...defaultProps}>
+                <path d="M12 16V3" />
+                <path d="m8 7 4-4 4 4" />
+                <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+            </svg>
+        );
+    case 'install':
+        return (
+            <svg {...defaultProps}>
+                <rect x="5" y="2" width="14" height="20" rx="3" />
+                <path d="M12 8v7" />
+                <path d="m9 12 3 3 3-3" />
             </svg>
         );
     default:

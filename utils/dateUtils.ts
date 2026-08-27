@@ -20,9 +20,24 @@ export const previousDateIds = (from: Date, count: number): string[] => {
   return ids;
 };
 
-/** Nhãn ngắn cho ngày gần đây: "Hôm qua", "3 ngày trước". */
+/** Nhãn ngắn cho ngày gần đây: "Hôm nay", "Hôm qua", "3 ngày trước". */
 export const relativeDayLabel = (daysAgo: number): string =>
-  daysAgo === 1 ? 'Hôm qua' : `${daysAgo} ngày trước`;
+  daysAgo === 0 ? 'Hôm nay'
+    : daysAgo === 1 ? 'Hôm qua'
+      : `${daysAgo} ngày trước`;
+
+/**
+ * Số ngày từ `dateId` tới `to`, tính theo ngày lịch địa phương.
+ *
+ * Quy về mốc nửa đêm rồi làm tròn: ngày đổi giờ mùa hè dài 23 hoặc 25 tiếng nên
+ * chia thẳng cho 86400000 sẽ lệch một ngày.
+ */
+export const daysBetween = (dateId: string, to: Date): number => {
+  const from = parseDateString(dateId);
+  const a = new Date(from.getFullYear(), from.getMonth(), from.getDate()).getTime();
+  const b = new Date(to.getFullYear(), to.getMonth(), to.getDate()).getTime();
+  return Math.round((b - a) / 86400000);
+};
 
 export const formatDate = (date: Date): string => {
   return new Intl.DateTimeFormat('vi-VN', {

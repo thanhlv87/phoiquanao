@@ -12,6 +12,7 @@ import { StatsSheet } from '../components/StatsSheet';
 import { AccountSheet } from '../components/AccountSheet';
 import { RecentlyWorn } from '../components/RecentlyWorn';
 import { SettingsSheet } from '../components/SettingsSheet';
+import { InstallBanner } from '../components/InstallPrompt';
 
 const OutfitCarousel: React.FC<{ outfits: Outfit[], onNavigate: (id: string) => void }> = ({ outfits, onNavigate }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -110,6 +111,7 @@ export const HomeScreen: React.FC = () => {
   const { state } = useOutfits();
   const { user } = useAuth();
   const [sheet, setSheet] = useState<'search' | 'stats' | 'account' | 'settings' | null>(null);
+  const [searchSeed, setSearchSeed] = useState('');
   const { showError } = useToast();
   const { outfitsByDate, allOutfits, loading: outfitsLoading, error } = state;
   const outfitList = useMemo(() => Object.values(allOutfits), [allOutfits]);
@@ -169,7 +171,7 @@ export const HomeScreen: React.FC = () => {
             />
           </div>
           <div className="flex gap-2 flex-shrink-0">
-          <button type="button" aria-label="Tìm kiếm" onClick={() => setSheet('search')} className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm text-slate-500 active:scale-90 transition-all border border-slate-100">
+          <button type="button" aria-label="Tìm kiếm" onClick={() => { setSearchSeed(''); setSheet('search'); }} className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm text-slate-500 active:scale-90 transition-all border border-slate-100">
             <Icon name="search" className="w-4 h-4" />
           </button>
           <button type="button" aria-label="Thống kê" onClick={() => setSheet('stats')} className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm text-slate-500 active:scale-90 transition-all border border-slate-100">
@@ -186,6 +188,8 @@ export const HomeScreen: React.FC = () => {
         <h1 className="text-2xl font-black text-slate-900 tracking-tighter uppercase italic leading-none mb-1">{timeGreeting},</h1>
         <p className="text-slate-500 font-bold text-base truncate">{greetingName} ✨</p>
       </header>
+
+      <InstallBanner />
 
       <main className="animate-fade-in">
         <div className="flex items-center gap-2 mb-3 px-2">
@@ -219,12 +223,18 @@ export const HomeScreen: React.FC = () => {
       </main>
 
       <SearchSheet
+        initialQuery={searchSeed}
         open={sheet === 'search'}
         outfits={outfitList}
         onClose={() => setSheet(null)}
         onSelect={(id) => { setSheet(null); navigate(`/outfit/${id}`); }}
       />
-      <StatsSheet open={sheet === 'stats'} outfits={outfitList} onClose={() => setSheet(null)} />
+      <StatsSheet
+        open={sheet === 'stats'}
+        outfits={outfitList}
+        onClose={() => setSheet(null)}
+        onPickTag={(tag) => { setSearchSeed(tag); setSheet('search'); }}
+      />
       <AccountSheet open={sheet === 'account'} outfits={outfitList} onClose={() => setSheet(null)} />
       <SettingsSheet open={sheet === 'settings'} onClose={() => setSheet(null)} />
     </div>

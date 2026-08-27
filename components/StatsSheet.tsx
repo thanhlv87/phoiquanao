@@ -1,49 +1,82 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Outfit } from '../types';
 import { BottomSheet } from './BottomSheet';
-import { parseDateString } from '../utils/dateUtils';
+import { parseDateString, relativeDayLabel } from '../utils/dateUtils';
+import { tagStats, pickTops, pickBottoms, pickTags, TagStat } from '../utils/tagStats';
 
 const DAY_NAMES = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
 
-interface TagCount { tag: string; count: number; }
+const COLLAPSED_ROWS = 5;
 
-const topCounts = (values: string[][], limit: number): TagCount[] => {
-  const counts = new Map<string, number>();
-  values.forEach(list => {
-    // Mỗi thẻ chỉ tính một lần cho mỗi bộ đồ.
-    new Set(list.map(t => t.trim()).filter(Boolean)).forEach(tag => {
-      counts.set(tag, (counts.get(tag) || 0) + 1);
-    });
-  });
-  return [...counts.entries()]
-    .map(([tag, count]) => ({ tag, count }))
-    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
-    .slice(0, limit);
-};
-
-const Bars: React.FC<{ title: string; data: TagCount[]; empty: string }> = ({ title, data, empty }) => {
+/**
+ * Tần suất từng món: số lần mặc kèm lần gần nhất.
+ *
+ * Riêng số lần thì chưa dùng được lúc đang chọn đồ — "áo sơ mi 42 lần" không nói
+ * lên điều gì, nhưng "42 lần, gần nhất hôm qua" thì có.
+ */
+const FrequencyList: React.FC<{
+  title: string;
+  data: TagStat[];
+  empty: string;
+  onPick?: (tag: string) => void;
+}> = ({ title, data, empty, onPick }) => {
+  const [expanded, setExpanded] = useState(false);
   const max = Math.max(...data.map(d => d.count), 1);
+  const shown = expanded ? data : data.slice(0, COLLAPSED_ROWS);
+
   return (
     <section className="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-sm mb-4">
-      <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{title}</h3>
+      <div className="flex items-baseline justify-between mb-4">
+        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</h3>
+        {data.length > 0 && (
+          <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">
+            {data.length} món
+          </span>
+        )}
+      </div>
+
       {data.length === 0 ? (
         <p className="text-xs text-slate-400 font-medium">{empty}</p>
       ) : (
-        <div className="space-y-3">
-          {data.map(item => (
-            <div key={item.tag} className="flex items-center gap-3">
-              <span className="w-24 text-xs font-bold text-slate-600 truncate">{item.tag}</span>
-              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-brand-600 rounded-full transition-all"
-                  style={{ width: `${(item.count / max) * 100}%` }}
-                />
-              </div>
-              <span className="w-6 text-right text-xs font-black text-slate-700">{item.count}</span>
-            </div>
-          ))}
-        </div>
+        <>
+          <ul className="space-y-3.5">
+            {shown.map(item => (
+              <li key={item.tag}>
+                <button
+                  type="button"
+                  onClick={onPick ? () => onPick(item.tag) : undefined}
+                  disabled={!onPick}
+                  className="w-full text-left disabled:cursor-default"
+                >
+                  <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                    <span className="text-xs font-bold text-slate-700 truncate">{item.tag}</span>
+                    <span className="text-[10px] font-black text-slate-400 flex-shrink-0 tabular-nums">
+                      {item.count} lần · {relativeDayLabel(item.daysAgo).toLowerCase()}
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-brand-600 rounded-full transition-all"
+                      style={{ width: `${(item.count / max) * 100}%` }}
+                    />
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          {data.length > COLLAPSED_ROWS && (
+            <button
+              type="button"
+              onClick={() => setExpanded(v => !v)}
+              aria-expanded={expanded}
+              className="mt-4 w-full text-[10px] font-black text-brand-600 uppercase tracking-widest py-2 active:scale-95 transition-all"
+            >
+              {expanded ? 'Thu gọn' : `Xem tất cả ${data.length} món`}
+            </button>
+          )}
+        </>
       )}
     </section>
   );
@@ -53,7 +86,8 @@ export const StatsSheet: React.FC<{
   open: boolean;
   outfits: Outfit[];
   onClose: () => void;
-}> = ({ open, outfits, onClose }) => {
+  onPickTag?: (tag: string) => void;
+}> = ({ open, outfits, onClose, onPickTag }) => {
   const stats = useMemo(() => {
     // Thống kê bám theo dateId (ngày mặc), không theo thời điểm tạo bản ghi:
     // ghi bù cho hôm qua vẫn phải tính vào hôm qua.
@@ -68,14 +102,16 @@ export const StatsSheet: React.FC<{
       ? DAY_NAMES[dayCounts.indexOf(Math.max(...dayCounts))]
       : '—';
 
+    const today = new Date();
+
     return {
       total: outfits.length,
       daysLogged: days.size,
       busiestDay,
       dayCounts,
-      tops: topCounts(outfits.map(o => o.tops), 5),
-      bottoms: topCounts(outfits.map(o => o.bottoms), 5),
-      tags: topCounts(outfits.map(o => o.tags), 5),
+      tops: tagStats(outfits, pickTops, today),
+      bottoms: tagStats(outfits, pickBottoms, today),
+      tags: tagStats(outfits, pickTags, today),
     };
   }, [outfits]);
 
@@ -119,9 +155,9 @@ export const StatsSheet: React.FC<{
             </div>
           </section>
 
-          <Bars title="Áo mặc nhiều nhất" data={stats.tops} empty="Chưa gắn thẻ áo nào." />
-          <Bars title="Quần/váy mặc nhiều nhất" data={stats.bottoms} empty="Chưa gắn thẻ quần nào." />
-          <Bars title="Phong cách hay dùng" data={stats.tags} empty="Chưa gắn thẻ phong cách nào." />
+          <FrequencyList title="Áo" data={stats.tops} empty="Chưa gắn thẻ áo nào." onPick={onPickTag} />
+          <FrequencyList title="Quần / Váy" data={stats.bottoms} empty="Chưa gắn thẻ quần nào." onPick={onPickTag} />
+          <FrequencyList title="Phong cách" data={stats.tags} empty="Chưa gắn thẻ phong cách nào." onPick={onPickTag} />
         </>
       )}
     </BottomSheet>

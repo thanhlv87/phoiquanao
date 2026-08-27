@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Outfit } from '../types';
 import { Icon } from './Icon';
 import { BottomSheet } from './BottomSheet';
@@ -11,8 +11,15 @@ export const SearchSheet: React.FC<{
   outfits: Outfit[];
   onClose: () => void;
   onSelect: (outfitId: string) => void;
-}> = ({ open, outfits, onClose, onSelect }) => {
-  const [query, setQuery] = useState('');
+  /** Từ khoá mồi khi mở từ chỗ khác, ví dụ bấm một món trong Thống kê. */
+  initialQuery?: string;
+}> = ({ open, outfits, onClose, onSelect, initialQuery = '' }) => {
+  const [query, setQuery] = useState(initialQuery);
+
+  // Nạp lại từ khoá mồi mỗi lần mở, để lần mở sau không dính từ khoá lần trước.
+  useEffect(() => {
+    if (open) setQuery(initialQuery);
+  }, [open, initialQuery]);
 
   const results = useMemo(() => {
     const needle = query.trim().toLowerCase();

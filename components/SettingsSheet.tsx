@@ -2,6 +2,7 @@ import React from 'react';
 import { BottomSheet } from './BottomSheet';
 import { Icon } from './Icon';
 import { useTheme } from '../hooks/useTheme';
+import { InstallSection } from './InstallPrompt';
 
 const APP_VERSION = '1.0.0';
 const CREDIT = '@2025-August87';
@@ -49,6 +50,8 @@ export const SettingsSheet: React.FC<{
           </p>
         </div>
       </div>
+
+      <InstallSection />
 
       {/* Đổi màu app */}
       <div className="bg-white rounded-[2rem] p-5 border border-slate-100 shadow-sm mb-4">

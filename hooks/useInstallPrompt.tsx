@@ -18,34 +18,21 @@ export type InstallStatus =
   /** Không cài được ở đây (trình duyệt trong app khác, hoặc chưa đủ điều kiện). */
   | 'unavailable';
 
-const DISMISS_KEY = 'outfit_log_install_dismissed_at';
-// Người dùng bỏ qua thì im một tháng, đừng hỏi lại mỗi lần mở app.
-const SNOOZE_MS = 30 * 24 * 60 * 60 * 1000;
-
-const readDismissed = (): boolean => {
-  try {
-    const at = Number(localStorage.getItem(DISMISS_KEY));
-    return Number.isFinite(at) && at > 0 && Date.now() - at < SNOOZE_MS;
-  } catch {
-    return false;
-  }
-};
-
 /**
  * Trạng thái dùng chung ở mức module, không phải state riêng của từng component.
  *
  * `beforeinstallprompt` chỉ bắn một lần cho cả trang và Chrome chỉ cho gọi
- * prompt() đúng một lần trên sự kiện đó. Nếu mỗi component giữ một bản sao thì
- * cài xong ở chỗ này, chỗ kia vẫn còn nút cài và bấm vào sẽ lỗi.
+ * prompt() đúng một lần trên sự kiện đó, nên mọi nơi hiển thị phải nhìn chung
+ * một nguồn sự thật.
  */
 let deferred: BeforeInstallPromptEvent | null = null;
 let installed = false;
-let dismissed = false;
 let started = false;
+let status: InstallStatus = 'unavailable';
 
 const listeners = new Set<() => void>();
 
-const currentStatus = (): InstallStatus => {
+const computeStatus = (): InstallStatus => {
   if (installed) return 'installed';
   if (deferred) return 'promptable';
   const ua = typeof navigator === 'undefined' ? '' : navigator.userAgent;
@@ -54,17 +41,10 @@ const currentStatus = (): InstallStatus => {
   return isIOS(ua, touchPoints) ? 'manual-ios' : 'unavailable';
 };
 
-// useSyncExternalStore đòi getSnapshot trả về cùng một tham chiếu khi chưa đổi,
-// nếu không React sẽ render vô hạn.
-let snapshot: { status: InstallStatus; dismissed: boolean } = {
-  status: 'unavailable',
-  dismissed: false,
-};
-
 const refresh = () => {
-  const status = currentStatus();
-  if (snapshot.status === status && snapshot.dismissed === dismissed) return;
-  snapshot = { status, dismissed };
+  const next = computeStatus();
+  if (next === status) return;
+  status = next;
   listeners.forEach(notify => notify());
 };
 
@@ -72,14 +52,13 @@ const start = () => {
   if (started || typeof window === 'undefined') return;
   started = true;
 
-  dismissed = readDismissed();
   installed = isStandalone(
     window.matchMedia('(display-mode: standalone)').matches,
     (navigator as Navigator & { standalone?: boolean }).standalone
   );
 
   window.addEventListener('beforeinstallprompt', (e: Event) => {
-    // Chặn thanh nhắc mặc định của trình duyệt để tự chọn thời điểm hiển thị.
+    // Chặn thanh nhắc mặc định của trình duyệt để tự chọn chỗ hiển thị.
     e.preventDefault();
     deferred = e as BeforeInstallPromptEvent;
     refresh();
@@ -103,12 +82,12 @@ const subscribe = (notify: () => void) => {
 };
 
 export const useInstallPrompt = () => {
-  const state = useSyncExternalStore(subscribe, () => snapshot, () => snapshot);
+  const current = useSyncExternalStore(subscribe, () => status, () => status);
 
   const promptInstall = useCallback(async (): Promise<boolean> => {
     if (!deferred) return false;
     const event = deferred;
-    // Xoá trước khi chờ: người dùng bấm nhanh hai lần sẽ không gọi prompt() hai lượt.
+    // Xoá trước khi chờ: bấm nhanh hai lần sẽ không gọi prompt() hai lượt.
     deferred = null;
     refresh();
     await event.prompt();
@@ -116,15 +95,5 @@ export const useInstallPrompt = () => {
     return outcome === 'accepted';
   }, []);
 
-  const dismiss = useCallback(() => {
-    try {
-      localStorage.setItem(DISMISS_KEY, String(Date.now()));
-    } catch {
-      // Chế độ riêng tư chặn localStorage: vẫn ẩn trong phiên này.
-    }
-    dismissed = true;
-    refresh();
-  }, []);
-
-  return { status: state.status, dismissed: state.dismissed, promptInstall, dismiss };
+  return { status: current, promptInstall };
 };

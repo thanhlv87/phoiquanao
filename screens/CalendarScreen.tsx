@@ -188,7 +188,9 @@ export const CalendarScreen: React.FC = () => {
         />
       )}
       
-      <header className="p-6 bg-white rounded-b-[40px] shadow-sm pt-14">
+      {/* pt bằng Home (2rem), cộng thêm phần tai thỏ khi chạy dạng app đã cài:
+          index.html để viewport-fit=cover nên trang tràn lên tận thanh trạng thái. */}
+      <header className="p-6 bg-white rounded-b-[40px] shadow-sm pt-[calc(2rem_+_env(safe-area-inset-top))]">
         <div className="flex justify-between items-center px-2 mb-2">
           <button type="button" aria-label="Tháng trước" onClick={handlePrevMonth} className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors">
             <Icon name="chevron-left" className="w-5 h-5 text-slate-600" />

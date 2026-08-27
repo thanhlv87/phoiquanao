@@ -11,6 +11,9 @@ Nhật ký thời trang tối giản dạng PWA: chụp lại trang phục mỗi
 - **Thẻ gợi ý** — gợi ý thẻ dựng sẵn, tự học thêm thẻ bạn hay dùng (lưu ở localStorage).
 - **Tìm kiếm & thống kê** — mở dạng tấm trượt từ Home, không chiếm thêm tab.
 - **Dữ liệu của bạn** — tải toàn bộ nhật ký về máy dạng JSON, hoặc xoá sạch tài khoản.
+- **Đăng nhập Google** — popup trên trình duyệt thường, tự chuyển sang redirect khi app
+  chạy dạng đứng riêng hoặc popup bị chặn. Đang dùng thử dạng khách thì tài khoản Google
+  được liên kết vào chính phiên đó nên dữ liệu không mất.
 - **Đồng bộ realtime** — sửa trên máy này, máy kia thấy ngay.
 - **Offline** — Firestore bật persistent cache, service worker cache vỏ ứng dụng.
 
@@ -52,7 +55,9 @@ công khai theo thiết kế của Firebase, việc bảo vệ dữ liệu do se
 
 Dự án cần một Firebase project có bật:
 
-- **Authentication** — phương thức Email/Password và Anonymous.
+- **Authentication** — phương thức Email/Password, Google và Anonymous.
+  Với Google, tên miền chạy app phải có trong *Authentication → Settings →
+  Authorized domains*, nếu không sẽ gặp lỗi `auth/unauthorized-domain`.
 - **Cloud Firestore**
 - **Cloud Storage**
 

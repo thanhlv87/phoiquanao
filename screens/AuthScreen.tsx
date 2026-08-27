@@ -14,7 +14,7 @@ export const AuthScreen: React.FC = () => {
     
     const navigate = useNavigate();
     const location = useLocation();
-    const { signInWithEmail, signUpWithEmail, loginAnonymously, user, error: authError, clearError } = useAuth();
+    const { signInWithEmail, signUpWithEmail, signInWithGoogle, loginAnonymously, user, error: authError, clearError } = useAuth();
 
     useEffect(() => {
         if (user) {
@@ -124,9 +124,29 @@ export const AuthScreen: React.FC = () => {
                     </button>
                 </form>
 
-                <div className="relative my-8 text-center">
-                    <button 
-                        onClick={() => handleAuthAction(loginAnonymously)} 
+                <div className="relative my-8">
+                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                        <div className="w-full border-t border-slate-200"></div>
+                    </div>
+                    <div className="relative flex justify-center">
+                        <span className="bg-white px-4 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Hoặc</span>
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={() => handleAuthAction(signInWithGoogle)}
+                    disabled={loading}
+                    className="w-full bg-white border-2 border-slate-200 text-slate-700 font-black py-4 rounded-2xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3 uppercase text-[10px] tracking-[0.2em] hover:border-slate-300"
+                >
+                    <Icon name="google" className="w-5 h-5" />
+                    Tiếp tục với Google
+                </button>
+
+                <div className="mt-6 text-center">
+                    <button
+                        type="button"
+                        onClick={() => handleAuthAction(loginAnonymously)}
                         disabled={loading}
                         className="py-2 text-[10px] font-black text-slate-400 hover:text-brand-600 transition-all uppercase tracking-[0.2em]"
                     >

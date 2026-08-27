@@ -116,3 +116,8 @@ dist
 
 # Firebase service account key
 serviceAccount*.json
+# Tên mặc định khi tải key từ Firebase Console: <project>-firebase-adminsdk-*.json
+*firebase-adminsdk*.json
+
+# Bản sao lưu Firestore (nặng, chứa ảnh người dùng)
+backups/

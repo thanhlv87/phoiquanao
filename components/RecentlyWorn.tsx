@@ -31,8 +31,8 @@ export const RecentlyWorn: React.FC<{
   const totalOutfits = days.reduce((sum, day) => sum + day.outfits.length, 0);
 
   return (
-    <div className="mt-12">
-      <div className="flex items-center justify-between mb-4 px-2">
+    <div className="mt-8">
+      <div className="flex items-center justify-between mb-3 px-2">
         <div className="flex items-center gap-2">
           <Icon name="home" className="text-slate-400 w-3.5 h-3.5" />
           <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Đã mặc gần đây</h2>
@@ -67,7 +67,7 @@ export const RecentlyWorn: React.FC<{
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <p className="text-[8px] font-black uppercase text-indigo-600 mt-1.5 px-1 truncate">
+                <p className="text-[8px] font-black uppercase text-brand-600 mt-1.5 px-1 truncate">
                   {/* Nhiều bộ trong cùng ngày thì chỉ bộ đầu mang nhãn ngày */}
                   {i === 0 ? relativeDayLabel(day.daysAgo) : ' '}
                 </p>

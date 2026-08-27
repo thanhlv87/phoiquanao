@@ -3,6 +3,17 @@
 @tailwind utilities;
 
 @layer base {
+  /* Màu nhấn mặc định (Chàm). ThemeProvider ghi đè các biến này lúc chạy. */
+  :root {
+    --brand-50: 238 242 255;
+    --brand-100: 224 231 255;
+    --brand-200: 199 210 254;
+    --brand-500: 99 102 241;
+    --brand-600: 79 70 229;
+    --brand-700: 67 56 202;
+    --brand-800: 55 48 163;
+  }
+
   /* Ép tất cả các thẻ UI sử dụng font Inter */
   html,
   body,

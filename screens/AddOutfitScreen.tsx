@@ -72,9 +72,9 @@ const TagInputSection: React.FC<{
       <h3 className="text-lg font-semibold text-gray-700 mb-2">{title}</h3>
       <div className="flex flex-wrap gap-2 mb-3">
         {tags.map(tag => (
-          <div key={tag} className="flex items-center bg-indigo-100 text-indigo-800 text-sm font-medium pl-3 pr-2 py-1 rounded-full">
+          <div key={tag} className="flex items-center bg-brand-100 text-brand-800 text-sm font-medium pl-3 pr-2 py-1 rounded-full">
             <span>{tag}</span>
-            <button onClick={() => onRemoveTag(tag)} className="ml-2 text-indigo-500 hover:text-indigo-700">
+            <button onClick={() => onRemoveTag(tag)} className="ml-2 text-brand-500 hover:text-brand-700">
               &times;
             </button>
           </div>
@@ -87,9 +87,9 @@ const TagInputSection: React.FC<{
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={`Thêm thẻ ${title.toLowerCase()}...`}
-          className="w-full pl-3 pr-16 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full pl-3 pr-16 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500"
         />
-        <button onClick={handleAdd} className="absolute right-1 top-1/2 -translate-y-1/2 bg-indigo-600 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-indigo-700">Thêm</button>
+        <button onClick={handleAdd} className="absolute right-1 top-1/2 -translate-y-1/2 bg-brand-600 text-white px-3 py-1 rounded-lg text-sm font-semibold hover:bg-brand-700">Thêm</button>
       </div>
       <div className="flex flex-wrap gap-2 mt-2">
         {filteredSuggestions.slice(0, 5).map(suggestion => (
@@ -260,7 +260,7 @@ export const AddOutfitScreen: React.FC = () => {
     if (state.loading) {
       return (
         <div className="p-4 md:p-6 min-h-screen bg-slate-50 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-600"></div>
         </div>
       );
     }
@@ -269,7 +269,7 @@ export const AddOutfitScreen: React.FC = () => {
         <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest mb-6">Không tìm thấy trang phục này</p>
         <button
           onClick={() => navigate('/')}
-          className="bg-indigo-600 text-white font-black py-4 px-10 rounded-2xl shadow-xl shadow-indigo-100 active:scale-95 transition-all uppercase text-[10px] tracking-widest"
+          className="bg-brand-600 text-white font-black py-4 px-10 rounded-2xl shadow-xl shadow-brand-100 active:scale-95 transition-all uppercase text-[10px] tracking-widest"
         >
           Về trang chủ
         </button>
@@ -332,7 +332,7 @@ export const AddOutfitScreen: React.FC = () => {
         </div>
 
         <div className="mt-8 flex items-center gap-4">
-          <button onClick={handleSave} disabled={isSaving || isDeleting} className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 active:scale-95 transition-all">
+          <button onClick={handleSave} disabled={isSaving || isDeleting} className="flex-1 bg-brand-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-brand-100 active:scale-95 transition-all">
             {isSaving ? 'ĐANG LƯU...' : 'LƯU TRANG PHỤC'}
           </button>
           {isEditMode && (

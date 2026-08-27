@@ -36,7 +36,7 @@ const Bars: React.FC<{ title: string; data: TagCount[]; empty: string }> = ({ ti
               <span className="w-24 text-xs font-bold text-slate-600 truncate">{item.tag}</span>
               <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-indigo-600 rounded-full transition-all"
+                  className="h-full bg-brand-600 rounded-full transition-all"
                   style={{ width: `${(item.count / max) * 100}%` }}
                 />
               </div>
@@ -109,7 +109,7 @@ export const StatsSheet: React.FC<{
                 <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
                   <div className="w-full flex-1 flex items-end">
                     <div
-                      className="w-full bg-indigo-600 rounded-t-md min-h-[2px] transition-all"
+                      className="w-full bg-brand-600 rounded-t-md min-h-[2px] transition-all"
                       style={{ height: `${(count / maxDay) * 100}%` }}
                     />
                   </div>

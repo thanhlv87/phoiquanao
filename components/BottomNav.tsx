@@ -4,7 +4,7 @@ import { NavLink } from 'react-router-dom';
 import { Icon } from './Icon';
 
 const NavItem: React.FC<{ to: string; icon: 'home' | 'calendar'; label: string }> = ({ to, icon, label }) => {
-  const activeClass = "text-indigo-600";
+  const activeClass = "text-brand-600";
   const inactiveClass = "text-slate-400";
 
   return (

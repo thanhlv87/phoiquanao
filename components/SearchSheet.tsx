@@ -36,7 +36,7 @@ export const SearchSheet: React.FC<{
           onChange={e => setQuery(e.target.value)}
           placeholder="Tìm theo thẻ, ví dụ áo sơ mi..."
           aria-label="Từ khoá tìm kiếm"
-          className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-600 transition-all text-sm font-semibold text-slate-900 placeholder-slate-400"
+          className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-brand-500/10 focus:border-brand-600 transition-all text-sm font-semibold text-slate-900 placeholder-slate-400"
         />
       </div>
 

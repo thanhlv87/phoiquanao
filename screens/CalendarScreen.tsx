@@ -40,9 +40,9 @@ const OutfitDetailModal: React.FC<{ outfit: Outfit; onClose: () => void; onUpdat
                     <h3 className="text-xl font-black text-slate-800 mb-4 tracking-tight uppercase">Chi tiết trang phục</h3>
                     <div className="space-y-4">
                         <div>
-                            <p className="text-[10px] font-black uppercase text-indigo-600 mb-1 tracking-widest">Áo</p>
+                            <p className="text-[10px] font-black uppercase text-brand-600 mb-1 tracking-widest">Áo</p>
                             <div className="flex flex-wrap gap-2">
-                                {outfit.tops.map(tag => <span key={tag} className="bg-indigo-50 text-indigo-700 text-xs font-bold px-4 py-1.5 rounded-full">{tag}</span>)}
+                                {outfit.tops.map(tag => <span key={tag} className="bg-brand-50 text-brand-700 text-xs font-bold px-4 py-1.5 rounded-full">{tag}</span>)}
                             </div>
                         </div>
                         <div>
@@ -63,7 +63,7 @@ const OutfitDetailModal: React.FC<{ outfit: Outfit; onClose: () => void; onUpdat
                 </div>
 
                 <div className="p-6 border-t border-slate-50 bg-slate-50/50 flex-shrink-0 flex items-center gap-4">
-                    <button onClick={() => onUpdate(outfit.id)} className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all">SỬA PHỐI ĐỒ</button>
+                    <button onClick={() => onUpdate(outfit.id)} className="flex-1 bg-brand-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-brand-100 hover:bg-brand-700 transition-all">SỬA PHỐI ĐỒ</button>
                 </div>
             </div>
         </div>
@@ -87,7 +87,7 @@ const OutfitPreview: React.FC<{
                     <h2 className="text-xl font-black text-slate-800 tracking-tight">{formatDate(date)}</h2>
                     <p className="text-xs text-slate-400 font-bold uppercase">{outfits.length} BỘ TRANG PHỤC</p>
                 </div>
-                <button type="button" aria-label="Thêm trang phục cho ngày này" onClick={() => onAddOutfit(dateId)} className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-100 active:scale-90 transition-all">
+                <button type="button" aria-label="Thêm trang phục cho ngày này" onClick={() => onAddOutfit(dateId)} className="w-12 h-12 rounded-2xl bg-brand-600 text-white flex items-center justify-center shadow-xl shadow-brand-100 active:scale-90 transition-all">
                     <Icon name="plus" className="w-6 h-6" />
                 </button>
             </div>
@@ -95,7 +95,7 @@ const OutfitPreview: React.FC<{
             {outfits.length === 0 ? (
                 <div className="py-12 flex flex-col items-center bg-white rounded-[40px] border-2 border-dashed border-slate-100 text-center">
                     <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest mb-4">Ngày này chưa có kỷ niệm</p>
-                    <button onClick={() => onAddOutfit(dateId)} className="text-indigo-600 font-bold text-sm underline underline-offset-4">Ghi lại ngay</button>
+                    <button onClick={() => onAddOutfit(dateId)} className="text-brand-600 font-bold text-sm underline underline-offset-4">Ghi lại ngay</button>
                 </div>
             ) : (
                 <div className="grid grid-cols-2 gap-4">
@@ -105,7 +105,7 @@ const OutfitPreview: React.FC<{
                                 <img src={thumbAt(outfit)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                             </div>
                             <div className="px-2 pb-1">
-                                <p className="text-[10px] font-black uppercase text-indigo-600 truncate">{outfit.tops[0] || 'Phối đồ'}</p>
+                                <p className="text-[10px] font-black uppercase text-brand-600 truncate">{outfit.tops[0] || 'Phối đồ'}</p>
                             </div>
                         </button>
                     ))}
@@ -152,7 +152,7 @@ export const CalendarScreen: React.FC = () => {
 
       grid.push(
         <button type="button" key={dateId} aria-label={`Ngày ${day}, ${outfitsForDay.length} trang phục`} aria-pressed={isSelected} onClick={() => handleDayClick(dateId)} className="relative aspect-square cursor-pointer">
-          <div className={`w-full h-full rounded-2xl flex items-center justify-center transition-all duration-300 ${isSelected ? 'ring-2 ring-indigo-500 bg-indigo-50 shadow-md scale-105 z-10' : ''}`}>
+          <div className={`w-full h-full rounded-2xl flex items-center justify-center transition-all duration-300 ${isSelected ? 'ring-2 ring-brand-500 bg-brand-50 shadow-md scale-105 z-10' : ''}`}>
             {hasOutfit ? (
               <div className="w-full h-full rounded-2xl overflow-hidden relative">
                 <img src={thumbAt(outfitsForDay[0])} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover opacity-80" />
@@ -161,14 +161,14 @@ export const CalendarScreen: React.FC = () => {
                     <span className="text-white font-black text-sm drop-shadow-md">{day}</span>
                 </div>
                 {outfitsForDay.length > 1 && (
-                    <div className="absolute top-1 right-1 bg-indigo-600 text-white text-[8px] font-black rounded-full w-4 h-4 flex items-center justify-center border border-white">
+                    <div className="absolute top-1 right-1 bg-brand-600 text-white text-[8px] font-black rounded-full w-4 h-4 flex items-center justify-center border border-white">
                         {outfitsForDay.length}
                     </div>
                 )}
               </div>
             ) : (
-              <div className={`w-full h-full rounded-2xl flex items-center justify-center hover:bg-slate-100 ${isToday ? 'border-2 border-indigo-200' : ''}`}>
-                <span className={`text-sm font-bold ${isToday ? 'text-indigo-600' : 'text-slate-400'}`}>{day}</span>
+              <div className={`w-full h-full rounded-2xl flex items-center justify-center hover:bg-slate-100 ${isToday ? 'border-2 border-brand-200' : ''}`}>
+                <span className={`text-sm font-bold ${isToday ? 'text-brand-600' : 'text-slate-400'}`}>{day}</span>
               </div>
             )}
           </div>
@@ -197,7 +197,7 @@ export const CalendarScreen: React.FC = () => {
             <h2 className="text-lg font-black text-slate-800 tracking-tight uppercase">
               {monthNames[currentMonth]}
             </h2>
-            <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{currentYear}</p>
+            <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest">{currentYear}</p>
           </div>
           <button type="button" aria-label="Tháng sau" onClick={handleNextMonth} className="p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors">
             <Icon name="chevron-right" className="w-5 h-5 text-slate-600" />
@@ -212,7 +212,7 @@ export const CalendarScreen: React.FC = () => {
         
         {loading ? (
             <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
             </div>
           ) : (
             <div className="grid grid-cols-7 gap-2 mt-4">

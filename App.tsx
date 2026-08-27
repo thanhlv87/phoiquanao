@@ -7,6 +7,7 @@ import { BottomNav } from './components/BottomNav';
 import { OutfitProvider } from './hooks/useOutfits';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { ToastProvider } from './hooks/useToast';
+import { ThemeProvider } from './hooks/useTheme';
 
 // Chỉ Home + Auth nằm trong bundle khởi động; các màn còn lại tải theo nhu cầu.
 const CalendarScreen = lazy(() => import('./screens/CalendarScreen').then(m => ({ default: m.CalendarScreen })));
@@ -114,13 +115,15 @@ function AppContent() {
 
 function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <OutfitProvider>
-          <AppContent />
-        </OutfitProvider>
-      </AuthProvider>
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <OutfitProvider>
+            <AppContent />
+          </OutfitProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
 
